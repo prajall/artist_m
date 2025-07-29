@@ -19,4 +19,20 @@ class ListCreateView(APIView):
         return Response(artists)
         # serializer = ArtistListSerializer(artists,many=True)
         # # serializer.is_valid(raise_exception=True)
-        # print("Artists from serializer:", serializer.data)
+        # print("Artists from serializer:", serializer.
+        # .
+        #1 data)
+
+
+class ArtistDetailView(APIView):
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_object(self, artist_id):
+        # fetch from SQL
+        artist = fetch_one('api/sql/artists/get_artist_by_id.sql', {'id': artist_id})
+        return artist
+
+    def get(self, request, artist_id):
+        artist = self.get_object(artist_id)
+        self.check_object_permissions(request, artist)  # <== ✅ pass dict as obj
+        return Response(artist)
