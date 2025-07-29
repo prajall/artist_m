@@ -14,7 +14,7 @@ def load_sql(path):
         return file.read().strip()
 
 # fetch from sql and return python serialized datas
-def fetch_all_dict(path,params):
+def fetch_all_dict(path,params=None):
     query = load_sql(path)
     
     with connection.cursor() as cursor:

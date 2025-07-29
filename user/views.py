@@ -9,7 +9,7 @@ from query.sql.utils import fetch_all_dict
 class UserListCreateView(APIView):
 
     permission_classes = [IsAuthenticated]
-
+    
     def post(self, request):
         data = request.data
         serializer = UserSerializer(data=data)
@@ -19,7 +19,7 @@ class UserListCreateView(APIView):
 
     def get(self, request):
         print("Authenticated user",request.user)
-        users = fetch_all_dict("users/fetch_users.sql",[])
+        users = fetch_all_dict("user/fetch_users.sql",[])
         print("Fetched users:",users)
         print(user for user in users)
         serializer = UserSerializer(users, many=True)

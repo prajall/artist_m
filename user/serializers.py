@@ -65,7 +65,7 @@ class UserSerializer(serializers.Serializer):
 
 
     def validate_email(self, value):
-        result = fetch_one("users/get_email.sql", [value])
+        result = fetch_one("user/get_email.sql", [value])
         print("-------validating email-------", result)
         if result and result["exists"]:
             raise serializers.ValidationError("Email Already Exists")
@@ -84,7 +84,7 @@ class UserSerializer(serializers.Serializer):
             validated_data['gender'],
             validated_data['address'],
         ]
-        new_user = execute_sql("users/insert_user.sql",params)
+        new_user = execute_sql("user/insert_user.sql",params)
         print("New User ", new_user)
         return new_user
     
@@ -98,7 +98,7 @@ class LoginSerializer(serializers.Serializer, TokenMixin):
         email = data['email']
         password = data['password']
 
-        user = fetch_one("users/get_user_by_email.sql",[email])
+        user = fetch_one("user/get_user_by_email.sql",[email])
         print("User fetch_one response",user['password'])
 
         if not user:
@@ -124,7 +124,6 @@ class LoginSerializer(serializers.Serializer, TokenMixin):
     
 
 class RefreshSerializer(serializers.Serializer, TokenMixin):
-    # access = serializers.CharField()
     refresh = serializers.CharField()
 
     def validate(self, data):
@@ -143,6 +142,4 @@ class RefreshSerializer(serializers.Serializer, TokenMixin):
         
         access = self.generate_access_token(user)
         
-        
-        print("Decoded user",user)
         return {"access":access}

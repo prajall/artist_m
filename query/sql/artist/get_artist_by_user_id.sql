@@ -1,0 +1,1 @@
+SELECT * from Artists where user_id = %s
