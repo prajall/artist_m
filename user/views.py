@@ -2,34 +2,52 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from .serializers import UserSerializer, LoginSerializer, RefreshSerializer
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-from user.permissions import IsManagerOrReadOnly, IsArtistManager, IsSuperAdmin
-from query.sql.utils import fetch_all_dict, fetch_one, execute_sql
+from user.permissions import IsManagerOrReadOnly, IsArtistManager, IsAuthenticated, IsSuperAdmin
+from query.sql.utils import fetch_all_dict,fetch_many_dict, fetch_one, execute_sql
 from app.utils import api_response, api_error
+from django.core.files.storage import FileSystemStorage
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.conf import settings
+import os
 
 # Create your views here.
 class UserListCreateView(APIView):
 
-    # permission_classes = [IsAuthenticated, IsSuperAdmin]
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
     
     def post(self, request):
-        data = request.data
+        data = request.data.copy()
         try:
+
             serializer = UserSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-                return api_response(201, "User created successfully", serializer.data)
-            else:
-                print("errors", serializer.errors)
+
+            if not serializer.is_valid():
                 return api_error(400, "Validation failed for provided details",serializer.errors)
+            validated_data = serializer.validated_data
+            if validated_data.get("profile_image"):
+                image = validated_data['profile_image']
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'user_profile'))
+                filename = fs.save(image.name, image)
+                profile_image_url = settings.MEDIA_URL + 'user_profile/' + filename
+                validated_data['profile_image'] = profile_image_url
+
+            user = serializer.save()
+            print("Serializer data", serializer.data)
+            return api_response(201, "User created successfully", serializer.data)
+            
         except Exception as e:
             print("Error creating user",e)
             return api_error(500, "Internal Server Error")
-
+            
     def get(self, request):
         print("Authenticated user",request.user)
-        users = fetch_all_dict("user/fetch_users.sql",[])
-        return api_response(200, "User fetched successfully", users)
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 12))
+        users = fetch_many_dict("user/fetch_users.sql", limit=limit, page=page)
+        total_users = fetch_one("user/user_count.sql")
+
+        return api_response(200, "User fetched successfully", {"total_users": total_users['count'],"users": users})
 
 class LoginView(APIView):
 
@@ -77,9 +95,16 @@ class UserDetailView(APIView):
         return api_response(200, "User detail fetched successfully", user)
 
     def patch(self, request, user_id):
-        data = request.data
+        data = request.data.copy()
         print("request data", request.data)
         try:
+            if 'profile_image' in request.FILES:
+                image = request.FILES['profile_image']
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'user_profile'))
+                filename = fs.save(image.name, image)
+                profile_image_url = settings.MEDIA_URL + 'user_profile/' + filename
+                data['profile_image'] = profile_image_url
+
             user = self.get_user(user_id)
             print("User", user)
         except Exception as e:

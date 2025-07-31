@@ -60,7 +60,8 @@ class UserSerializer(serializers.Serializer):
     phone = serializers.CharField(min_length = 10)
     gender = serializers.ChoiceField(choices = GENDER_CHOICE)
     address = serializers.CharField()
-    dob = serializers.DateTimeField()
+    dob = serializers.DateField()
+    profile_image = serializers.ImageField(required=False, allow_null=True)
     created_at = serializers.DateTimeField(read_only = True)
     updated_at= serializers.DateTimeField(read_only = True)
 
@@ -68,8 +69,36 @@ class UserSerializer(serializers.Serializer):
     def validate_email(self, value):
         result = fetch_one("user/get_email.sql", [value])
         if result and result["exists"]:
-            raise serializers.ValidationError("Email Already Exists")
+            raise serializers.ValidationError("Email already exists")
         return value
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be atleast 8 characters long")
+        return value
+
+    def validate_phone(self, value):
+        if not len(value) == 10:
+            raise serializers.ValidationError("Phone number must be 10 characters long")
+        
+        for char in value:
+            if not char.isdigit():
+                raise serializers.ValidationError("Phone number must contain only digits")
+        return value
+    
+    def validate_profile_image(self, image):
+        allowed_extensions = ['jpg', 'jpeg', 'png', 'webp']
+        ext = image.name.split('.')[-1].lower()
+
+        if ext not in allowed_extensions:
+            raise serializers.ValidationError("File type must be jpg, jpeg, png, or webp.")
+
+        if image.size > 10 * 1024 * 1024:  # 10MB
+            raise serializers.ValidationError("File size must be less than 10MB.")
+
+        return image
+        
+    
 
 
     def create(self, validated_data):
@@ -83,8 +112,11 @@ class UserSerializer(serializers.Serializer):
             validated_data['phone'],
             validated_data['gender'],
             validated_data['address'],
+            validated_data['dob'],
+            validated_data['profile_image']
         ]
-        new_user = execute_sql(path="user/insert_user.sql",params=params)
+
+        new_user = execute_sql(path="user/insert_user.sql",params=params, fetch_one=True)
         print("New User ", new_user)
         return new_user
     
@@ -105,7 +137,7 @@ class UserSerializer(serializers.Serializer):
                 continue
             columns.append(f"{key} = %({key})s")
             params[key] = value
-            
+
         columns.append("updated_at = NOW()")
         params['id'] = instance['id']
 

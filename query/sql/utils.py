@@ -21,28 +21,32 @@ def fetch_all_dict(path,params=None):
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchall()
-        return [dict(zip(columns, row)) for row in rows]
+            rows = cursor.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
 
     except Exception as e:
         print("Error fetching data:", e)
         return []
     
-def fetch_many_dict(path,params,size=12):
+def fetch_many_dict(path,params=None,limit=12, page=1):
     try:
         query = load_sql(path)
+        params = params or {}
+
+        params['limit'] = limit
+        params['offset'] = (page - 1) * limit
 
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             columns = [col[0] for col in cursor.description]
-            rows = cursor.fetchmany(size)
+            rows = cursor.fetchmany(limit)
             return [dict(zip(columns, row)) for row in rows]
 
     except Exception as e:
         print("Error fetching data:", e)
         return []
 
-def fetch_one(path,params):
+def fetch_one(path,params=None):
     try:
         query = load_sql(path)
 
@@ -72,5 +76,5 @@ def execute_sql(path=None, params=None, query=None,fetch_one=False):
                 return dict(zip(columns, row))
             return cursor.rowcount
     except Exception as e:
-        print("Error fetching data:", e)
+        print("Error executing query:", e)
         return None
