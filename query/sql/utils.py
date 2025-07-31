@@ -15,40 +15,62 @@ def load_sql(path):
 
 # fetch from sql and return python serialized datas
 def fetch_all_dict(path,params=None):
-    query = load_sql(path)
-    
-    with connection.cursor() as cursor:
-        cursor.execute(query, params)
-        columns = [col[0] for col in cursor.description]
+    try:
+        query = load_sql(path)
+
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            columns = [col[0] for col in cursor.description]
         rows = cursor.fetchall()
         return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        print("Error fetching data:", e)
+        return []
     
 def fetch_many_dict(path,params,size=12):
-    query = load_sql(path)
+    try:
+        query = load_sql(path)
 
-    with connection.cursor() as cursor:
-        cursor.execute(query, params)
-        columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchmany(size)
-        return [dict(zip(columns, row)) for row in rows]
-    
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchmany(size)
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        print("Error fetching data:", e)
+        return []
+
 def fetch_one(path,params):
-    query = load_sql(path)
+    try:
+        query = load_sql(path)
 
-    with connection.cursor() as cursor:
-        cursor.execute(query,params)
-        columns = [col[0] for col in cursor.description]
-        row = cursor.fetchone()
-        return dict(zip(columns, row))
-    
-def execute_sql(path, params, fetch_one=False):
-    query = load_sql(path)
-
-    with connection.cursor() as cursor:
-        cursor.execute(query,params)
-        # print(dir(cursor.description))
-        if fetch_one:
+        with connection.cursor() as cursor:
+            cursor.execute(query,params)
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
             return dict(zip(columns, row))
-        return cursor.rowcount
+    except Exception as e:
+        print("Error fetching data:", e)
+        return None
+    
+def execute_sql(path=None, params=None, query=None,fetch_one=False):
+    try:
+        if not path and not query:
+            raise ValueError("Either 'path' or 'query' must be provided.")
+            
+        if not query:
+            query = load_sql(path)
+
+        with connection.cursor() as cursor:
+            cursor.execute(query,params)
+            # print(dir(cursor.description))
+            if fetch_one:
+                columns = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+                return dict(zip(columns, row))
+            return cursor.rowcount
+    except Exception as e:
+        print("Error fetching data:", e)
+        return None

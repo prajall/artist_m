@@ -29,7 +29,7 @@ class ArtistSerializer(serializers.Serializer):
             validated_data['first_release_year'],
         ]
 
-        new_artist = execute_sql("artist/insert_artist.sql",params, fetch_one=True)
+        new_artist = execute_sql(path="artist/insert_artist.sql",params=params, fetch_one=True)
         print("New Artist",new_artist)
 
         return new_artist

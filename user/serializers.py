@@ -60,13 +60,13 @@ class UserSerializer(serializers.Serializer):
     phone = serializers.CharField(min_length = 10)
     gender = serializers.ChoiceField(choices = GENDER_CHOICE)
     address = serializers.CharField()
+    dob = serializers.DateTimeField()
     created_at = serializers.DateTimeField(read_only = True)
     updated_at= serializers.DateTimeField(read_only = True)
 
 
     def validate_email(self, value):
         result = fetch_one("user/get_email.sql", [value])
-        print("-------validating email-------", result)
         if result and result["exists"]:
             raise serializers.ValidationError("Email Already Exists")
         return value
@@ -84,11 +84,48 @@ class UserSerializer(serializers.Serializer):
             validated_data['gender'],
             validated_data['address'],
         ]
-        new_user = execute_sql("user/insert_user.sql",params)
+        new_user = execute_sql(path="user/insert_user.sql",params=params)
         print("New User ", new_user)
         return new_user
     
-     
+        
+    def update(self, instance, validated_data):
+
+        if 'password' in validated_data:
+            validated_data['password'] = make_password(validated_data['password'])
+
+        new_data = validated_data.items()
+        columns = []
+        params = {}
+        allowed_fields = ['first_name','last_name','phone','dob','address','gender']
+
+        for (key, value) in new_data:
+            if key not in allowed_fields:
+                print("invalid key",key)
+                continue
+            columns.append(f"{key} = %({key})s")
+            params[key] = value
+            
+        columns.append("updated_at = NOW()")
+        params['id'] = instance['id']
+
+        # [
+        #   "first_name = %(first_name)s"
+        #   "last_name = %(last_name)s"
+        # ]
+
+        # { first_name = Prajal, last_name = Maharjan }
+
+        
+        query = f"""
+            UPDATE Users
+            SET {", ".join(columns)}
+            WHERE id = %(id)s
+            RETURNING id, email, first_name, last_name, phone, dob, address, gender, role
+        """
+        updated_user = execute_sql(query=query, params=params, fetch_one=True)
+        print("Updated User ", updated_user)
+        return updated_user
 
 class LoginSerializer(serializers.Serializer, TokenMixin):
     email = serializers.EmailField()
