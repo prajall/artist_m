@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from .serializers import UserSerializer, LoginSerializer, RefreshSerializer
 from rest_framework.response import Response
-from user.permissions import IsManagerOrReadOnly, IsArtistManager, IsAuthenticated, IsSuperAdmin
+from user.permissions import IsManagerOrReadOnly, IsArtistManager, IsAuthenticated, IsSuperAdmin,IsSelfOrSuperUser
 from query.sql.utils import fetch_all_dict,fetch_many_dict, fetch_one, execute_sql
 from app.utils import api_response, api_error
 from django.core.files.storage import FileSystemStorage
@@ -33,8 +33,8 @@ class UserListCreateView(APIView):
                 validated_data['profile_image'] = profile_image_url
 
             user = serializer.save()
-            print("Serializer data", serializer.data)
-            return api_response(201, "User created successfully", serializer.data)
+            del user['password'] 
+            return api_response(201, "User created successfully", user)
             
         except Exception as e:
             print("Error creating user",e)
@@ -49,35 +49,10 @@ class UserListCreateView(APIView):
 
         return api_response(200, "User fetched successfully", {"total_users": total_users['count'],"users": users})
 
-class LoginView(APIView):
-
-    def post(self,request):
-        data = request.data
-        serializer = LoginSerializer(data = data)
-        serializer.is_valid()
-
-        print("Serializer data", serializer.validated_data)
-        user = serializer.validated_data['user']
-        access= serializer.validated_data['access_token']
-        refresh= serializer.validated_data['refresh_token']
-        final_res = {
-            "user":user,
-            "access":access,
-            "refresh":refresh
-        }
-
-        return api_response(200, "Login Successfull",final_res )
-       
-class RefreshView(APIView):
-
-    def post (self,request):
-        data = request.data
-        serializer = RefreshSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        final_res = {"access":serializer.validated_data['access']}
-        return api_response(200, "Accss token refreshed successfully",final_res)
 
 class UserDetailView(APIView):
+
+    permission_classes = [IsSelfOrSuperUser]
     
     def get_user(self, user_id):
         try:
@@ -130,3 +105,31 @@ class UserDetailView(APIView):
             return api_response(204, "User deleted successfully")
         if delete_user==0:
             return api_response(204, "User already deleted")
+            
+class LoginView(APIView):
+
+    def post(self,request):
+        data = request.data
+        serializer = LoginSerializer(data = data)
+        serializer.is_valid()
+
+        print("Serializer data", serializer.validated_data)
+        user = serializer.validated_data['user']
+        access= serializer.validated_data['access_token']
+        refresh= serializer.validated_data['refresh_token']
+        final_res = {
+            "user":user,
+            "access":access,
+            "refresh":refresh
+        }
+
+        return api_response(200, "Login Successfull",final_res )
+       
+class RefreshView(APIView):
+
+    def post (self,request):
+        data = request.data
+        serializer = RefreshSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        final_res = {"access":serializer.validated_data['access']}
+        return api_response(200, "Accss token refreshed successfully",final_res)

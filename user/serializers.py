@@ -98,8 +98,6 @@ class UserSerializer(serializers.Serializer):
 
         return image
         
-    
-
 
     def create(self, validated_data):
         hashed_password = make_password(validated_data['password'])
@@ -140,21 +138,14 @@ class UserSerializer(serializers.Serializer):
 
         columns.append("updated_at = NOW()")
         params['id'] = instance['id']
-
-        # [
-        #   "first_name = %(first_name)s"
-        #   "last_name = %(last_name)s"
-        # ]
-
-        # { first_name = Prajal, last_name = Maharjan }
-
-        
+       
         query = f"""
             UPDATE Users
             SET {", ".join(columns)}
             WHERE id = %(id)s
             RETURNING id, email, first_name, last_name, phone, dob, address, gender, role
         """
+        
         updated_user = execute_sql(query=query, params=params, fetch_one=True)
         print("Updated User ", updated_user)
         return updated_user
