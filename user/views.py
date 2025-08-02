@@ -44,7 +44,7 @@ class UserListCreateView(APIView):
         print("Authenticated user",request.user)
         page = int(request.query_params.get('page', 1))
         limit = int(request.query_params.get('limit', 12))
-        users = fetch_many_dict("user/fetch_users.sql", limit=limit, page=page)
+        users = fetch_many_dict(path="user/fetch_users.sql", limit=limit, page=page)
         total_users = fetch_one("user/user_count.sql")
 
         return api_response(200, "User fetched successfully", {"total_users": total_users['count'],"users": users})
