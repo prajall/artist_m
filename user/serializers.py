@@ -66,11 +66,11 @@ class UserSerializer(serializers.Serializer):
     updated_at= serializers.DateTimeField(read_only = True)
 
 
-    def validate_email(self, value):
-        result = fetch_one("user/get_email.sql", [value])
-        if result and result["exists"]:
-            raise serializers.ValidationError("Email already exists")
-        return value
+    # def validate_email(self, value):
+    #     result = fetch_one("user/get_email.sql", [value])
+    #     if result and result["exists"]:
+    #         raise serializers.ValidationError("Email already exists")
+    #     return value
 
     def validate_password(self, value):
         if len(value) < 8:

@@ -79,7 +79,7 @@ def fetch_one(path=None,params=None):
         print("Error fetching data:", e)
         return None
     
-def execute_sql(path=None, params=None, query=None,fetch_one=False):
+def execute_sql(path=None, params=None, query=None,fetch_one=False,fetch_all_dict=False):
     try:
         if not path and not query:
             raise ValueError("Either 'path' or 'query' must be provided.")
@@ -94,6 +94,11 @@ def execute_sql(path=None, params=None, query=None,fetch_one=False):
                 row = cursor.fetchone()
                 print("row in fetchone",row)
                 return dict(zip(columns, row)) or None
+            if fetch_all_dict:
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                print("row in fetchone",rows)
+                return [dict(zip(columns, row)) for row in rows] or None
             return cursor.rowcount
     except Exception as e:
         print("Error executing query:", e)

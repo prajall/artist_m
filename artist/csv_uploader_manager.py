@@ -8,11 +8,10 @@ def user_exists(email):
     return fetch_one("user/get_user_by_email.sql", [email])
 
 
-def upload_artists(file, manager_id):
+def manager_upload_artists(file, manager_id):
     file.seek(0)
     text_io = io.TextIOWrapper(file, encoding='utf-8')
 
-    # Read the first line (header)
     header_line = text_io.readline().strip()
     headers = header_line.split(',')
 
@@ -25,51 +24,37 @@ def upload_artists(file, manager_id):
     text_io.seek(0)
     reader = csv.DictReader(text_io)
     artist_datas = list(reader)
+
     errors = []
     query_values = []
 
-    print(artist_datas)
+    print("Artist_data",artist_datas)
 
-    # for artist in artist_datas:
-    #     email  = artist.get("email")
-    #     artist_name = artist.get("artist_name")
-    #     first_release_year = artist.get("first_release_year")
+    valid_artists = bulk_data_validation(artist_datas)
+    print("Valid Artists",valid_artists)
 
-    #     if not email or not artist_name or not first_release_year:
-    #         raise ValueError("Email, artist name, and first release year are required.")
-
-    #     # user = user_exists(email)
-    #     # if not user:
-    #     #     print(f"User with email {email} does not exist.")
-    #     #     errors.append(f"User with email {email} does not exist.")
-    #     #     continue
+    for artist in valid_artists:
         
-    #     # query_values.append(f"('{user['id']}', '{artist_name}', '{first_release_year}-01-01','{manager_id}', NOW(), NOW())")
+        query_values.append(f"('{artist['user_id']}', '{artist['artist_name']}', '{artist['first_release_year']}-01-01','{manager_id}', NOW(), NOW())")
         
     
-    # if errors and len(errors)>0:
-    #     raise ValueError("\n".join(errors))
+    query = f"""
+        INSERT INTO artists (user_id, artist_name, first_release_year, manager_id, created_at, updated_at)
+        VALUES {",".join(query_values)}
+        RETURNING *
+        """
 
-    bulk_data_validation(artist_datas)
-    
-
-    # query = f"""
-    #     INSERT INTO artists (user_id, artist_name, first_release_year, manager_id, created_at, updated_at)
-    #     VALUES {",".join(query_values)}
-    #     RETURNING *
-    #     """
-
-    # result = execute_sql(query=query)
-    # return result
-    return 0
+    result = execute_sql(query=query)
+    return result
 
 
 def bulk_data_validation(artists):
 
-    emails = [row['email'] for row in artists]
+    emails = [row['email'].strip() for row in artists]
 
     print("Emails", emails)
-    
+
+    # Fetch all users with provided emails
     user_query = """
         SELECT id, email, role 
         FROM users 
@@ -96,6 +81,8 @@ def bulk_data_validation(artists):
         existing_artist_user_ids = None
 
     errors = []
+    valid_artists = []
+    
     for artist in artists:
         user = user_by_email.get(artist['email'])
 
@@ -103,13 +90,20 @@ def bulk_data_validation(artists):
             errors.append(f"User with email {artist['email']} does not exist.")
             continue
         
-        if user['role'] != 'user':
-            errors.append(f"User with email {artist['email']} is not a normal user.")
-            continue
-
         if user['id'] in existing_artist_user_ids:
             errors.append(f"Artist with email {artist['email']} already exists.")
             continue
 
+        if user['role'] != 'user':
+            errors.append(f"User with email {artist['email']} is not a normal user.")
+            continue
+
+        
+        artist['user_id'] = user['id']
+        
+        valid_artists.append(artist)
+
     if errors and len(errors)>0:
         raise ValueError("\n".join(errors))
+    
+    return valid_artists
