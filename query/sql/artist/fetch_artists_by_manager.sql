@@ -21,5 +21,5 @@ SELECT
 FROM Artists
 JOIN Users on Artists.user_id = Users.id
 join Users as Managers on Artists.manager_id = Managers.id
-where Users.role = 'artist'
+where Artists.manager_id = %(manager_id)s 
 LIMIT %(limit)s OFFSET %(offset)s;

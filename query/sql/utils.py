@@ -46,11 +46,11 @@ def fetch_many_dict(path=None,query=None,params=None,limit=12, page=1):
 
         params = params or {}
 
-        print("query",query)
-        print("params",params)
 
         params['limit'] = limit
         params['offset'] = (page - 1) * limit
+        print("query",query)
+        print("params",params)
 
         with connection.cursor() as cursor:
             cursor.execute(query, params)
@@ -74,6 +74,8 @@ def fetch_one(path=None,params=None):
                 return None
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
+            print("columns",columns)
+            print("row",row)
             return dict(zip(columns, row))
     except Exception as e:
         print("Error fetching data:", e)

@@ -111,7 +111,7 @@ class LoginView(APIView):
     def post(self,request):
         data = request.data
         serializer = LoginSerializer(data = data)
-        serializer.is_valid()
+        serializer.is_valid(raise_exception=True)
 
         print("Serializer data", serializer.validated_data)
         user = serializer.validated_data['user']

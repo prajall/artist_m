@@ -21,6 +21,7 @@ GENDER_CHOICE = (
 class TokenMixin:
     def generate_access_token(self, user):
         payload = {
+            "id":user['id'],
             "email":user['email'],
             "first_name":user['first_name'],
             "last_name":user['last_name'],
@@ -36,6 +37,7 @@ class TokenMixin:
     
     def generate_refresh_token(self, user):
         payload = {
+            "id":user['id'],
             "email":user['email'],
             "first_name":user['first_name'],
             "last_name":user['last_name'],
@@ -48,6 +50,8 @@ class TokenMixin:
             raise(serializers.ValidationError("Invalid signature"))
 
         return token
+    
+    
     
 
 class UserSerializer(serializers.Serializer):
@@ -66,11 +70,11 @@ class UserSerializer(serializers.Serializer):
     updated_at= serializers.DateTimeField(read_only = True)
 
 
-    # def validate_email(self, value):
-    #     result = fetch_one("user/get_email.sql", [value])
-    #     if result and result["exists"]:
-    #         raise serializers.ValidationError("Email already exists")
-    #     return value
+    def validate_email(self, value):
+        result = fetch_one("user/get_email.sql", [value])
+        if result and result["exists"]:
+            raise serializers.ValidationError("Email already exists")
+        return value
 
     def validate_password(self, value):
         if len(value) < 8:
@@ -158,26 +162,29 @@ class LoginSerializer(serializers.Serializer, TokenMixin):
         email = data['email']
         password = data['password']
 
-        user = fetch_one("user/get_user_by_email.sql",[email])
-        print("User fetch_one response",user['password'])
+        user = fetch_one("user/login_user.sql",[email])
+        print("User fetch_one response",user)
+
 
         if not user:
-            raise serializers.ValidationError("User not found")
+            print("User not found")
+            raise serializers.ValidationError({"email": "User with this email does not exist."})
         
         if not check_password(password, user['password']):
-            raise serializers.ValidationError("Incorrect Password")
+            raise serializers.ValidationError({"password": "Incorrect password."})
         
      
         access_token = self.generate_access_token(user)
         refresh_token = self.generate_refresh_token(user)
                
         data["user"]={
+            "id":user['id'],
             "email":user['email'],
             "first_name":user['first_name'],
             "last_name":user['last_name'],
             "role":user['role']
         }
-        data["access_token"]=access_token,
+        data["access_token"]=access_token
         data["refresh_token"]=refresh_token
 
         return data
