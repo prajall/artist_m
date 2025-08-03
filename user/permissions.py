@@ -13,11 +13,23 @@ class IsArtistManager(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.role == 'artist_manager'
 
+class IsArtistOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        else:
+            return request.user.role == 'artist'
+
 class IsArtist(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.role == 'artist'
 
 class IsManagerOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        else :
+            return request.user.role == 'artist_manager'
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:

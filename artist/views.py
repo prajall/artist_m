@@ -1,13 +1,10 @@
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from user.permissions import IsManagerOrReadOnly
-from app.utils import api_response, api_error
 from query.sql.utils import fetch_all_dict, fetch_one, execute_sql
 from .serializers import *
+from user.permissions import IsManagerOrReadOnly
+from app.utils import api_response, api_error
 from .csv_uploader_manager import manager_upload_artists
 from .csv_uploader_s_admin import s_admin_upload_artists
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from user.permissions import *
 
 # Create your views here.
@@ -33,7 +30,7 @@ class ArtistListCreateView(APIView):
         try:
             limit = int(request.GET.get("limit", 12))
             page = int(request.GET.get("page", 1))  
-            
+
             if request.user.role=='super_admin':
                 artists = fetch_many_dict(path="artist/fetch_artists.sql",limit=limit, page=page)
 
@@ -62,7 +59,7 @@ class ArtistDetailView(APIView):
     def get(self, request, artist_id):
         artist = self.get_object(artist_id)
         self.check_object_permissions(request, artist)  
-        return Response(artist)
+        return api_response(200, "Artist fetched successfully", artist)
     
 
 class ArtistCSVUploadView(APIView):
@@ -72,7 +69,7 @@ class ArtistCSVUploadView(APIView):
     def post(self, request):
         file = request.FILES.get('file')
         if not file.name.endswith('.csv'):
-            return Response({"error": "Only CSV files are supported."}, status=400)
+            return api_error(400,"Only CSV files are supported.")
 
         try:
             if request.user['role'] == 'artist_manager':
