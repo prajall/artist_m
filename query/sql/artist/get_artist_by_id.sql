@@ -1,1 +1,1 @@
-select * from artists where id = %s
+select * from artists where id = %(id)s

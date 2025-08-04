@@ -24,20 +24,36 @@ class ArtistSerializer(serializers.Serializer):
         return value
 
     def validate_manager_id(self, value):
+
+        print("context", self.context)
+        user = self.context.get("user")
+
         manager_exists = fetch_one("user/get_artist_manager_exists.sql", [value])
         if not manager_exists['exists']:
             raise serializers.ValidationError("Artist manager with this ID does not exist")
-        return value
+
+        if user.role == "artist":
+            raise serializers.ValidationError("Artist cannot assign artist manager")
+
+        if user.role == "artist_manager":
+            if value != user.id:
+               raise serializers.ValidationError("You can only assign yourself as the manager.")
+            return user.id
+        
+        if user.role == "super_admin":
+            return value
+
+        raise serializers.ValidationError("Unauthorized role.")
 
     def create(self, validated_data):
 
         try:
-            params = [
-                validated_data['user_id'],
-                validated_data['artist_name'],
-                validated_data['manager_id'],
-                validated_data['first_release_year'],
-            ]
+            params = {
+                "user_id" : validated_data['user_id'],
+                "artist_name":validated_data['artist_name'],
+                "manager_id": validated_data['manager_id'],
+                "first_release_year": validated_data['first_release_year'],
+            }
             print("Params for insert artist:", params)
             new_artist = execute_sql(path="artist/insert_artist.sql",params=params, fetch_one=True)
             print("New Artist",new_artist)
@@ -48,6 +64,32 @@ class ArtistSerializer(serializers.Serializer):
         
         except Exception as e:
             print("Error findind artist",e)
+            return None
+    
+    def update(self, instance, validated_data):
+        try:
+            field_values= []
+
+            for field, value in validated_data.items():
+                field_values.append(f"{field} = '{value}'")  
+                
+            # params = {
+            #     "artist_name":validated_data['artist_name'],
+            #     "manager_id": validated_data['manager_id'],
+            #     "first_release_year": validated_data['first_release_year'],
+            # }
+
+            query = f"""
+                UPDATE Artists
+                SET {', '.join(field_values)}
+                WHERE id = {instance['id']}
+                RETURNING *
+            """
+            updated_artist = execute_sql(query=query, fetch_one=True)
+            print("Updated Artist",updated_artist)
+            return updated_artist
+        except Exception as e:
+            print("Error updating artist",e)
             return None
         
 

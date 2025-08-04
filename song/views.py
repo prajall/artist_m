@@ -3,7 +3,7 @@ from query.sql.utils import fetch_all_dict, fetch_one, execute_sql
 from .serializers import *
 from user.permissions import *
 from app.utils import api_response, api_error
-
+from rest_framework import status
 
 
 class SongListCreateView(APIView):
@@ -20,13 +20,13 @@ class SongListCreateView(APIView):
             
             serializer = SongSerializer(data=data)
             if not serializer.is_valid():
-                return api_error(400, "Validation failed for provided details", serializer.errors)
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
             serializer.save()
-            return api_response(201, "Song created successfully", serializer.data)
+            return api_response(status.HTTP_201_CREATED, "Song created successfully", serializer.data)
 
         except Exception as e:
             print("Error creating song", e)
-            return api_error(500, "Internal server error", str(e))
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
     def get (self, request):
         try:
@@ -40,7 +40,7 @@ class SongListCreateView(APIView):
             songs=[]
 
             if user_role == 'artist':
-                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
                 artist_id = artist.get("id")
                 songs = fetch_many_dict(path="song/fetch_songs.sql", params={
                     "artist_id":artist_id, 
@@ -65,7 +65,7 @@ class SongListCreateView(APIView):
                     "limit":limit, 
                     "page":page
                 })
-            return api_response(200, "Songs fetched successfully", songs)
+            return api_response(status.HTTP_200_OK, "Songs fetched successfully", songs)
         except Exception as e:
             print("Error fetching songs", e)
-            return api_error(500, "Internal server error", str(e))
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

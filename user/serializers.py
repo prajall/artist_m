@@ -52,9 +52,7 @@ class TokenMixin:
         return token
     
     
-    
-
-class UserSerializer(serializers.Serializer):
+class BaseUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only = True)
     email = serializers.EmailField()
     password = serializers.CharField(write_only = True)
@@ -68,13 +66,6 @@ class UserSerializer(serializers.Serializer):
     profile_image = serializers.ImageField(required=False, allow_null=True)
     created_at = serializers.DateTimeField(read_only = True)
     updated_at= serializers.DateTimeField(read_only = True)
-
-
-    def validate_email(self, value):
-        result = fetch_one("user/get_email.sql", [value])
-        if result and result["exists"]:
-            raise serializers.ValidationError("Email already exists")
-        return value
 
     def validate_password(self, value):
         if len(value) < 8:
@@ -101,7 +92,14 @@ class UserSerializer(serializers.Serializer):
             raise serializers.ValidationError("File size must be less than 10MB.")
 
         return image
-        
+
+class UserSerializer(BaseUserSerializer):
+    
+    def validate_email(self, value):
+        result = fetch_one("user/get_email.sql", [value])
+        if result and result["exists"]:
+            raise serializers.ValidationError("Email already exists")
+        return value  
 
     def create(self, validated_data):
         hashed_password = make_password(validated_data['password'])

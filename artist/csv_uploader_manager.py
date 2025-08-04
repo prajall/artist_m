@@ -13,13 +13,15 @@ def manager_upload_artists(file, manager_id):
     text_io = io.TextIOWrapper(file, encoding='utf-8')
 
     header_line = text_io.readline().strip()
-    headers = header_line.split(',')
+    headers = [h.strip() for h in header_line.split(',')]
 
     required_headers = {"email", "artist_name", "first_release_year"}
     missing_headers = required_headers - set(headers)
 
     if missing_headers:
         raise ValueError(f"Missing required headers: {', '.join(missing_headers)}")
+    
+    # check invalid headers
 
     text_io.seek(0)
     reader = csv.DictReader(text_io)
@@ -73,7 +75,7 @@ def bulk_data_validation(artists):
         existing_artists_query = """
             SELECT user_id 
             FROM artists 
-            WHERE user_id = ANY(%s)
+            WHERE user_id = ANY(%s) 
         """
         existing_artists_result = fetch_all_dict(query=existing_artists_query, params=[user_ids])
         existing_artist_user_ids = {row['user_id'] for row in existing_artists_result}
@@ -83,19 +85,23 @@ def bulk_data_validation(artists):
     errors = []
     valid_artists = []
     
-    for artist in artists:
+    # check and send errors     for row_num, data in enumerate(artist_user_datas, start=2):
+
+    for row_num, artist in enumerate(artists,start=2):
         user = user_by_email.get(artist['email'])
+        
+        print("\nUser for email",artist['email'],user)
 
         if not user:
-            errors.append(f"User with email {artist['email']} does not exist.")
+            errors.append(f"Row: {row_num}: User with email '{artist['email']}' does not exist.")
             continue
         
         if user['id'] in existing_artist_user_ids:
-            errors.append(f"Artist with email {artist['email']} already exists.")
+            errors.append(f"Row: {row_num}: Artist with email '{artist['email']}' already exists.")
             continue
 
         if user['role'] != 'user':
-            errors.append(f"User with email {artist['email']} is not a normal user.")
+            errors.append(f"Row: {row_num}: User with email '{artist['email']}' is not a normal user.")
             continue
 
         

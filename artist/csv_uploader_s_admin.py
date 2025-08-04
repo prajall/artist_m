@@ -4,7 +4,7 @@ from query.sql.utils import fetch_one, execute_sql, fetch_many_dict, fetch_all_d
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password
 
-from .serializers import UserSerializer
+from user.serializers import BaseUserSerializer
 
 
 def user_exists(email):
@@ -16,7 +16,7 @@ def s_admin_upload_artists(file):
     text_io = io.TextIOWrapper(file, encoding='utf-8')
 
     header_line = text_io.readline().strip()
-    headers = header_line.split(',')
+    headers = [h.strip() for h in header_line.split(',')]
 
     required_headers = {"email","password","first_name","last_name","dob","gender","phone","address", "artist_name", "first_release_year"}
     missing_headers = required_headers - set(headers)
@@ -27,6 +27,7 @@ def s_admin_upload_artists(file):
     text_io.seek(0)
     reader = csv.DictReader(text_io)
     artist_user_datas = list(reader)
+    
 
 
     print("Artist_data",artist_user_datas)
@@ -106,20 +107,21 @@ def bulk_data_validation(artist_user_datas):
     user_query_values = []
     valid_user_artist_datas = []
     
-    for data in artist_user_datas:
+    for row_num, data in enumerate(artist_user_datas, start=2):
         print("manager_email=",data['manager_email'])
         data['manager_id'] = manager_email_to_user.get(data['manager_email'])['id']
         if not manager_email_to_user.get(data['manager_email']):
-            errors.append(f"Manager with email '{data['manager_email']}' does not exist.")
+            errors.append(f"Row {row_num}: Artist Manager with email '{data['manager_email']}' does not exist.")
             continue
 
         data['role'] = 'artist'
         
-        serializer = UserSerializer(data = data)
+        serializer = BaseUserSerializer(data = data)
        
         if not serializer.is_valid():
             
-           errors.append(f"Data validation error for user email: {data['email']}")
+           for field, error in serializer.errors.items():
+               errors.append(f"Row {row_num}: '{field}': {error[0]}")
            print("Validation error",serializer.errors)
         else :
             valid_user_artist_datas.append(data)

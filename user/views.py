@@ -1,13 +1,15 @@
-from django.shortcuts import render
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import UserSerializer, LoginSerializer, RefreshSerializer
 from rest_framework.response import Response
-from user.permissions import IsManagerOrReadOnly, IsArtistManager, IsAuthenticated, IsSuperAdmin,IsSelfOrSuperUser
+from user.permissions import *
 from query.sql.utils import fetch_all_dict,fetch_many_dict, fetch_one, execute_sql
 from app.utils import api_response, api_error
 from django.core.files.storage import FileSystemStorage
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
+from rest_framework import status
+from rest_framework.permissions import OR
 import os
 
 # Create your views here.
@@ -23,7 +25,7 @@ class UserListCreateView(APIView):
             serializer = UserSerializer(data=data)
 
             if not serializer.is_valid():
-                return api_error(400, "Validation failed for provided details",serializer.errors)
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
             validated_data = serializer.validated_data
             if validated_data.get("profile_image"):
                 image = validated_data['profile_image']
@@ -34,11 +36,11 @@ class UserListCreateView(APIView):
 
             user = serializer.save()
             del user['password'] 
-            return api_response(201, "User created successfully", user)
+            return api_response(status.HTTP_201_CREATED, "User created successfully", user)
             
         except Exception as e:
             print("Error creating user",e)
-            return api_error(500, "Internal Server Error")
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal Server Error")
             
     def get(self, request):
         print("Authenticated user",request.user)
@@ -47,13 +49,12 @@ class UserListCreateView(APIView):
         users = fetch_many_dict(path="user/fetch_users.sql", limit=limit, page=page)
         total_users = fetch_one("user/user_count.sql")
 
-        return api_response(200, "User fetched successfully", {"total_users": total_users['count'],"users": users})
+        return api_response(status.HTTP_200_OK, "User fetched successfully", {"total_users": total_users['count'],"users": users})
 
 
 class UserDetailView(APIView):
 
-    permission_classes = [IsSelfOrSuperUser]
-    
+    permission_classes = [IsAuthenticated, IsSelfOrSuperAdmin]    
     def get_user(self, user_id):
         try:
             user = fetch_one("user/fetch_user_detail.sql", [user_id])
@@ -66,12 +67,13 @@ class UserDetailView(APIView):
         user = self.get_user(user_id)
         self.check_object_permissions(request,user)
         if not user:
-            return api_error(404,"User not found")
-        return api_response(200, "User detail fetched successfully", user)
+            return api_error(status.HTTP_404_NOT_FOUND,"User not found")
+        return api_response(status.HTTP_200_OK, "User detail fetched successfully", user)
 
     def patch(self, request, user_id):
         data = request.data.copy()
         print("request data", request.data)
+        print("User_id",user_id)
         try:
             if 'profile_image' in request.FILES:
                 image = request.FILES['profile_image']
@@ -82,18 +84,18 @@ class UserDetailView(APIView):
 
             user = self.get_user(user_id)
             print("User", user)
+            serializer = UserSerializer( data=data , instance=user , partial=True)
+
+            if not serializer.is_valid():
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for user details",serializer.errors)
+            serializer.save()
+            return api_response(status.HTTP_200_OK,"User detail updated successfully",serializer.data)
         except Exception as e:
             print("Error fetching user",e)
-            return api_error(500,"Internal Server Error")
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR,"Internal Server Error")
             # return Response("Failed to update user")
         
         
-        serializer = UserSerializer( data=data , instance=user , partial=True)
-
-        if not serializer.is_valid():
-            return api_error(400, "Validation failed for user details",serializer.error_messages)
-        serializer.save()
-        return api_response(200,"User detail updated successfully",serializer.data)
 
     def delete(self, request, user_id):
         try:
@@ -102,9 +104,9 @@ class UserDetailView(APIView):
         except Exception as e:
             print("Error Deleting user",e)
         if delete_user == 1:    
-            return api_response(204, "User deleted successfully")
+            return api_response(status.HTTP_204_NO_CONTENT, "User deleted successfully")
         if delete_user==0:
-            return api_response(204, "User already deleted")
+            return api_response(status.HTTP_204_NO_CONTENT, "User already deleted")
             
 class LoginView(APIView):
 
@@ -117,13 +119,26 @@ class LoginView(APIView):
         user = serializer.validated_data['user']
         access= serializer.validated_data['access_token']
         refresh= serializer.validated_data['refresh_token']
-        final_res = {
-            "user":user,
-            "access":access,
-            "refresh":refresh
-        }
-
-        return api_response(200, "Login Successfull",final_res )
+        
+        response = Response({"message":"Login Successfull","data":user},status=status.HTTP_200_OK)
+        response.set_cookie(
+            key='access_token',
+            value= access,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            max_age=settings.ACCESS_TOKEN_LIFETIME
+        )
+        
+        response.set_cookie(
+            key='refresh_token',
+            value= refresh,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            max_age=settings.REFRESH_TOKEN_LIFETIME
+        )
+        return response
        
 class RefreshView(APIView):
 
@@ -131,5 +146,15 @@ class RefreshView(APIView):
         data = request.data
         serializer = RefreshSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        final_res = {"access":serializer.validated_data['access']}
-        return api_response(200, "Accss token refreshed successfully",final_res)
+        access = serializer.validated_data['access']
+        
+        Response.set_cookie(
+            key='access_token',
+            value= access,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            max_age=settings.ACCESS_TOKEN_LIFETIME
+        )
+        
+        return Response({"message":"Accss token refreshed successfully"},status=status.HTTP_200_OK)

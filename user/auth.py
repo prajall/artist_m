@@ -7,15 +7,14 @@ class JWTAuthentication(BaseAuthentication):
 
     def authenticate(self, request):
         print("Authenticating")
-        auth_header = request.headers.get("Authorization")
+        token = request.COOKIES.get("access_token")
 
-        if not auth_header or not auth_header.startswith("Bearer "):
+        if not token:
+            print("No access_token in cookies")
             return None
 
-        token = auth_header.split(" ")[1]
-
         try:
-            payload = jwt.decode(token,settings.SECRET_KEY,"HS256" )
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             print("Token expired")
             return None
@@ -23,10 +22,10 @@ class JWTAuthentication(BaseAuthentication):
             print("Invalid Token", e)
             return None
         except Exception as e:
-            print("Error in Authentication",e)
+            print("Error in Authentication", e)
             return None
-        
-        print("Auth User model",payload)
+
+        print("Auth User model", payload)
         user = AuthUser(payload)
         return (user, token)
            
@@ -34,3 +33,27 @@ class JWTAuthentication(BaseAuthentication):
 
 
         
+    # def authenticate(self, request):
+    #     print("Authenticating")
+    #     auth_header = request.headers.get("Authorization")
+
+    #     if not auth_header or not auth_header.startswith("Bearer "):
+    #         return None
+
+    #     token = auth_header.split(" ")[1]
+
+    #     try:
+    #         payload = jwt.decode(token,settings.SECRET_KEY,"HS256" )
+    #     except jwt.ExpiredSignatureError:
+    #         print("Token expired")
+    #         return None
+    #     except jwt.InvalidTokenError as e:
+    #         print("Invalid Token", e)
+    #         return None
+    #     except Exception as e:
+    #         print("Error in Authentication",e)
+    #         return None
+        
+    #     print("Auth User model",payload)
+    #     user = AuthUser(payload)
+    #     return (user, token)
