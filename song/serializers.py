@@ -10,13 +10,13 @@ class SongSerializer(serializers.Serializer):
     genre = serializers.CharField(default = "Music")
     song_cover = serializers.CharField(required=False, allow_blank=True)
     
-    # def validate(self, attrs):
-    #     user_id = self.context["user_id"]
-    #     artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
-    #     if not artist:
-    #         raise serializers.ValidationError("Artist not found for this user.")
-    #     attrs["artist_id"] = artist["id"]
-    #     return attrs
+    def validate(self, attrs):
+        user_id = self.context["user_id"]
+        artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
+        if not artist:
+            raise serializers.ValidationError("Artist not found for this user.")
+        attrs["artist_id"] = artist["id"]
+        return attrs
 
     # def validate_artist_id(self, value):
     #     artist = fetch_one("artist/get_artist_by_user_id.sql", [self.user_id])
@@ -36,3 +36,28 @@ class SongSerializer(serializers.Serializer):
         new_song = execute_sql(path="song/insert_song.sql",params=params, fetch_one=True)
         print("New Song",new_song)
         return new_song
+    
+    def update(self, instance, validated_data):
+        try:
+            
+            field_values= []
+            
+            print("Song instance", instance)
+
+            for field, value in validated_data.items():
+                field_values.append(f"{field} = '{value}'")
+                
+            query = f"""
+                UPDATE Songs
+                SET {', '.join(field_values)}
+                WHERE id = {instance['id']}
+                RETURNING *
+            """
+            updated_song = execute_sql(query=query, fetch_one=True)
+            print("Updated Song",updated_song)
+            return updated_song
+
+        except Exception as e:
+            print("Error updating artist",e)
+            return None
+        

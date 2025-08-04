@@ -4,6 +4,8 @@ from .serializers import *
 from user.permissions import *
 from app.utils import api_response, api_error
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied, NotAuthenticated
+
 
 
 class SongListCreateView(APIView):
@@ -18,7 +20,7 @@ class SongListCreateView(APIView):
             artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
             data['artist_id'] = artist['id']
             
-            serializer = SongSerializer(data=data)
+            serializer = SongSerializer(data=data, context={"user_id": request.user.id})
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
             serializer.save()
@@ -69,3 +71,69 @@ class SongListCreateView(APIView):
         except Exception as e:
             print("Error fetching songs", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+        
+class SongDetailView(APIView):
+
+    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+
+    def get_object(self, song_id):
+        try:
+            song = fetch_one("song/get_song_by_id.sql", {"id":song_id})
+            return song
+        except Exception as e:
+            print("Error fetching song", e)
+            return None
+        
+    def get(self,request,song_id):
+        try:
+            song = self.get_object(song_id)
+            if not song:
+                return api_error(status.HTTP_404_NOT_FOUND,"Song not found")
+            return api_response(status.HTTP_200_OK, "Song detail fetched successfully", song)
+
+        except (PermissionDenied, NotAuthenticated) as e:
+           return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        except Exception as e:
+            print("Error fetching song",e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR,"Internal Server Error")
+    
+    def patch(self, request, song_id):
+        try:
+            song = self.get_object(song_id)
+            if not song:
+                return api_error(status.HTTP_404_NOT_FOUND,"Song not found")
+
+            self.check_object_permissions(request, song)
+
+            serializer = SongSerializer(data=request.data, instance = song,context={"user_id": request.user.id} ,partial=True)
+
+            print("hdfhdhfdh")
+
+            if not serializer.is_valid():
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
+            serializer.save()
+            return api_response(status.HTTP_200_OK, "Song updated successfully", serializer.data)
+
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        
+        except Exception as e:
+            print("Error updating song",e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR,"Internal Server Error")
+
+    
+    def delete(self, request, song_id):
+        try:
+            song = self.get_object(song_id)
+            if not song:
+                return api_error(status.HTTP_404_NOT_FOUND,"Song not found")
+            self.check_object_permissions(request, song)
+            execute_sql("song/delete_song.sql", {"id":song_id})
+            return api_response(status.HTTP_204_NO_CONTENT, "Song deleted successfully")
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        
+        except Exception as e:
+            print("Error updating song",e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR,"Internal Server Error")
+     
