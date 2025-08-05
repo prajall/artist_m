@@ -89,6 +89,8 @@ def execute_sql(path=None, params=None, query=None,fetch_one=False,fetch_all_dic
         if not query:
             query = load_sql(path)
 
+        print("query: ",query)
+        
         with connection.cursor() as cursor:
             cursor.execute(query,params)
             if fetch_one:

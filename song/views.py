@@ -5,12 +5,13 @@ from user.permissions import *
 from app.utils import api_response, api_error
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
-
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class SongListCreateView(APIView):
 
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated, IsArtist]
     
     def post(self, request):
         data = request.data.copy()
@@ -23,8 +24,8 @@ class SongListCreateView(APIView):
             serializer = SongSerializer(data=data, context={"user_id": request.user.id})
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
-            serializer.save()
-            return api_response(status.HTTP_201_CREATED, "Song created successfully", serializer.data)
+            new_song = serializer.save()
+            return api_response(status.HTTP_201_CREATED, "Song created successfully", new_song)
 
         except Exception as e:
             print("Error creating song", e)

@@ -25,6 +25,19 @@ class IsArtistOrReadOnly(permissions.BasePermission):
             return True
         else:
             return request.user.id == obj['user_id']
+        
+class IsArtistOrReadOnlySuperAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS and request.user.role == 'super_admin':
+            return True
+        else:
+            return request.user.role == 'artist'
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS and request.user.role == 'super_admin':
+            return True
+        else:
+            return request.user.id == obj['user_id']
 
 class IsArtist(permissions.BasePermission):
     def has_permission(self, request, view):
