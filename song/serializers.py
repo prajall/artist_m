@@ -10,9 +10,17 @@ class SongSerializer(serializers.Serializer):
     title = serializers.CharField()
     genre = serializers.CharField(default = "Music")
     song_cover = serializers.ImageField(required=False)
+    album_id = serializers.IntegerField(required=False)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
     
     def validate_song_cover(self, file):
         return save_image_file(file, "song_cover")
+    
+    def validate_album_id(self, value):
+        if not fetch_one("album/get_album_by_id.sql", {"album_id":value}):
+            raise serializers.ValidationError("Album with this ID does not exist")
+        return value
     
     def create(self, validated_data):
         try:

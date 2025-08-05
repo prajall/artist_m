@@ -73,3 +73,53 @@ class AlbumSongSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     album_id = serializers.IntegerField()
     song_id = serializers.IntegerField()
+
+    def create(self, validated_data):
+        new_album_song = execute_sql(
+            path="album/insert_album_song.sql",
+            params={
+                "song_id": validated_data["song_id"], 
+                "album_id": validated_data['album_id']
+            },
+            fetch_one=True
+        )
+        print("New Album song:", new_album_song)
+        return new_album_song
+
+class ValidatedAlbumSerializer(AlbumSongSerializer):
+
+    def validate_album_id(self, value):
+        request_user_id = self.context.get('user_id')
+
+        artist = fetch_one("artist/get_artist_by_user_id.sql", [request_user_id])
+        if not artist:
+            raise serializers.ValidationError("Artist not found.")
+        artist_id = artist['id']
+
+        album = fetch_one("album/get_album_by_id.sql", {"album_id": value})
+        if not album:
+            raise serializers.ValidationError(f"Invalid album ID: {value}")
+
+        if album['artist_id'] != artist_id:
+            raise serializers.ValidationError("You do not have permission to modify this album.")
+
+        return value
+
+class ValidatedSongSerializer(AlbumSongSerializer):
+
+    def validate_song_id(self, value):
+        request_user_id = self.context.get('user_id')
+
+        artist = fetch_one("artist/get_artist_by_user_id.sql", [request_user_id])
+        if not artist:
+            raise serializers.ValidationError("Artist not found.")
+        artist_id = artist['id']
+
+        song = fetch_one("album/get_song_by_id.sql", {"song_id": value})
+        if not song:
+            raise serializers.ValidationError("Invalid song ID.")
+
+        if song['artist_id'] != artist_id:
+            raise serializers.ValidationError("You do not have permission to modify this song.")
+
+        return value

@@ -74,8 +74,6 @@ def fetch_one(path=None,params=None):
                 return None
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
-            print("columns",columns)
-            print("row",row)
             return dict(zip(columns, row))
     except Exception as e:
         print("Error fetching data:", e)
@@ -96,12 +94,10 @@ def execute_sql(path=None, params=None, query=None,fetch_one=False,fetch_all_dic
             if fetch_one:
                 columns = [col[0] for col in cursor.description]
                 row = cursor.fetchone()
-                print("row in fetchone",row)
                 return dict(zip(columns, row)) or None
             if fetch_all_dict:
                 columns = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
-                print("row in fetchone",rows)
                 return [dict(zip(columns, row)) for row in rows] or None
             return cursor.rowcount
     except Exception as e:

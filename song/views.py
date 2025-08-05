@@ -1,3 +1,4 @@
+import json
 from rest_framework.views import APIView
 from query.sql.utils import fetch_all_dict, fetch_one, execute_sql
 from .serializers import *
@@ -6,6 +7,7 @@ from app.utils import api_response, api_error
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
+from album.serializers import ValidatedAlbumSerializer
 
 
 class SongListCreateView(APIView):
@@ -25,8 +27,26 @@ class SongListCreateView(APIView):
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
             new_song = serializer.save()
+            
+            # add song to albums
+            albums = request.data.get("albums")
+            print("\n Albums:", albums)
+            if albums:
+                if isinstance(albums, str):
+                    try:
+                        albums = json.loads(albums)
+                    except Exception:
+                        albums = [albums]
+                for album_id in albums:
+                    album_serializer = ValidatedAlbumSerializer(data ={"album_id": album_id,"song_id": new_song['id']}, context ={"user_id": request.user.id})
+                    album_serializer.is_valid(raise_exception=True)
+                    album_serializer.save()
+            
             return api_response(status.HTTP_201_CREATED, "Song created successfully", new_song)
 
+        except serializers.ValidationError as e:
+            return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", e.detail)
+        
         except Exception as e:
             print("Error creating song", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
