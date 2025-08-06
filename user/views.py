@@ -120,6 +120,9 @@ class LoginView(APIView):
         access= serializer.validated_data['access_token']
         refresh= serializer.validated_data['refresh_token']
         
+        
+        # return api_response(status.HTTP_200_OK,"Login Successfull",{"user":user,"access_token":access,"refresh_token":refresh})
+        
         response = Response({"message":"Login Successfull","data":user},status=status.HTTP_200_OK)
         response.set_cookie(
             key='access_token',
