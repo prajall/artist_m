@@ -22,6 +22,12 @@ class SongSerializer(serializers.Serializer):
             raise serializers.ValidationError("Album with this ID does not exist")
         return value
     
+    def vaildate_artist_id(self, value):
+        artist = fetch_one("artist/get_artist_by_id.sql", [value])
+        if not artist:
+            raise serializers.ValidationError("Invalid artist ID.")
+        return value
+    
     def create(self, validated_data):
         try:
        

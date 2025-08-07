@@ -20,7 +20,7 @@ from rest_framework.serializers import ValidationError
 class AlbumListCreateView(APIView):
 
     parser_classes = (JSONParser,MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnlySuperAdmin]
+    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
     
     def post(self, request):
         data = request.data.copy()
@@ -33,7 +33,8 @@ class AlbumListCreateView(APIView):
                 print("Artist not found")
                 raise serializers.ValidationError("No artist associated with this user.")
 
-            data['artist_id'] = artist['id']
+            if request.user.role == 'artist':
+                data['artist_id'] = artist['id']
             
             serializer = AlbumSerializer(data=data)
             if not serializer.is_valid():
@@ -49,22 +50,61 @@ class AlbumListCreateView(APIView):
 
     def get(self, request):
         try:
+            user_id = request.user.id
+            user_role = request.user.role
             page = request.GET.get('page', 1)
             limit = request.GET.get('limit', 12)
             artist_id = request.GET.get('artist_id', None)
+            manager_id = (request.GET.get("manager_id",None))
+            songs=[]
+            total_albums = {
+                "total_count":0
+            }
 
-            if request.user.role == 'artist':
-                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
-                if not artist:
-                    return api_error(status.HTTP_404_NOT_FOUND, "Artist not found") 
+            # if request.user.role == 'artist':
+            #     artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+            #     if not artist:
+            #         return api_error(status.HTTP_404_NOT_FOUND, "Artist not found") 
 
-                artist_id = artist['id']
+            #     artist_id = artist['id']
             
-            albums = fetch_many_dict(path="album/fetch_albums.sql", params={"artist_id":artist_id},limit=limit, page=page)
+            if user_role == 'artist':
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
+                artist_id = artist.get("id")
+                params={
+                    "artist_id":artist_id, 
+                    "manager_id":artist.get('manager_id',None),
+                    "limit":limit, 
+                    "page":page,
+                }
+                albums = fetch_many_dict(path="album/fetch_albums.sql",params=params)
+                total_albums = fetch_one(path="album/get_album_count.sql",params=params)
+                
+            if user_role == 'artist_manager':
+                params={
+                    "artist_id":artist_id,
+                    "manager_id":user_id,
+                    "limit":limit, 
+                    "page":page
+                }
+                albums = fetch_many_dict(path="album/fetch_albums.sql",params=params )
+                total_albums = fetch_one(path="album/get_album_count.sql",params=params)
 
-            total_albums = fetch_one("album/get_album_count.sql", {"artist_id":artist_id})
+            if user_role == 'super_admin':
+                params={
+                    "artist_id":artist_id,
+                    "manager_id":manager_id,
+                    "limit":limit, 
+                    "page":page
+                }
+                albums = fetch_many_dict(path="album/fetch_albums.sql", params=params)
+                total_albums = fetch_one(path="album/get_album_count.sql",params=params)
+            
+            # albums = fetch_many_dict(path="album/fetch_albums.sql", params={"artist_id":artist_id},limit=limit, page=page)
 
-            return api_response(status.HTTP_200_OK, "Albums fetched successfully", {"total_albums": total_albums['total_albums'],"albums": albums})
+            # total_albums = fetch_one("album/get_album_count.sql", {"artist_id":artist_id})
+
+            return api_response(status.HTTP_200_OK, "Albums fetched successfully", {"total_albums": total_albums['total_count'],"albums": albums})
 
         except:
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")    
@@ -72,7 +112,7 @@ class AlbumListCreateView(APIView):
 class AlbumDetailView(APIView):
 
     parser_classes = (MultiPartParser, FormParser,)
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnlySuperAdmin]
+    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
 
     def get_object(self, album_id):
         try:

@@ -18,13 +18,13 @@ class IsArtistOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         else:
-            return request.user.role == 'artist'
+            return request.user.role == 'artist' or request.user.role== 'super_admin'
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
         else:
-            return request.user.id == obj['user_id']
+            return request.user.id == obj['user_id'] or request.user.role== 'super_admin'
         
 class IsArtistOrReadOnlySuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -41,7 +41,7 @@ class IsArtistOrReadOnlySuperAdmin(permissions.BasePermission):
 
 class IsArtist(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.role == 'artist'
+        return request.user.role == 'artist' or request.user.role == 'super_admin'
 
 class IsManagerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -54,7 +54,7 @@ class IsManagerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         else :
-            obj['manager_id'] == request.user.id or request.user.role == 'super_admin'
+            return obj['manager_id'] == request.user.id or request.user.role == 'super_admin'
                 
 class IsSelfOrSuperAdmin(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):

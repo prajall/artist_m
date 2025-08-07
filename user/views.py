@@ -161,3 +161,9 @@ class RefreshView(APIView):
         )
         
         return Response({"message":"Accss token refreshed successfully"},status=status.HTTP_200_OK)
+    
+    
+class UserInfo(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        return api_response(status.HTTP_200_OK, "User info fetched successfully", request.user)

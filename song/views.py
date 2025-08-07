@@ -13,7 +13,7 @@ from album.serializers import ValidatedAlbumSerializer
 class SongListCreateView(APIView):
 
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsArtist]
+    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
     
     def post(self, request):
         data = request.data.copy()
@@ -21,7 +21,9 @@ class SongListCreateView(APIView):
 
         try:
             artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
-            data['artist_id'] = artist['id']
+            
+            if request.user.role == 'artist':
+                data['artist_id'] = artist['id']
             
             serializer = SongSerializer(data=data, context={"user_id": request.user.id})
             if not serializer.is_valid():
@@ -61,34 +63,42 @@ class SongListCreateView(APIView):
             limit = int(request.GET.get("limit", 12))
             page = int(request.GET.get("page", 1))
             songs=[]
+            total_songs = {
+                "total_count":0
+            }
 
             if user_role == 'artist':
                 artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
                 artist_id = artist.get("id")
-                songs = fetch_many_dict(path="song/fetch_songs.sql", params={
+                params={
                     "artist_id":artist_id, 
                     "manager_id":artist.get('manager_id',None),
                     "limit":limit, 
                     "page":page,
-                })
+                }
+                songs = fetch_many_dict(path="song/fetch_songs.sql",params=params)
+                total_songs = fetch_one(path="song/get_total_songs.sql",params=params)
                 
             if user_role == 'artist_manager':
-                songs = fetch_many_dict(path="song/fetch_songs.sql", params={
+                params={
                     "artist_id":artist_id,
                     "manager_id":user_id,
                     "limit":limit, 
                     "page":page
-                })
+                }
+                songs = fetch_many_dict(path="song/fetch_songs.sql",params=params )
 
             if user_role == 'super_admin':
-                songs = fetch_many_dict(path="song/fetch_songs.sql", 
                 params={
                     "artist_id":artist_id,
                     "manager_id":manager_id,
                     "limit":limit, 
                     "page":page
-                })
-            return api_response(status.HTTP_200_OK, "Songs fetched successfully", songs)
+                }
+                songs = fetch_many_dict(path="song/fetch_songs.sql", params=params)
+                total_songs = fetch_one(path="song/get_total_songs.sql",params=params)
+                
+            return api_response(status.HTTP_200_OK, "Songs fetched successfully", {"songs":songs, "total_songs":total_songs['total_count']})
         except Exception as e:
             print("Error fetching songs", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

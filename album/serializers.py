@@ -15,6 +15,13 @@ class AlbumSerializer(serializers.Serializer):
         if not any(field in data for field in allowed_fields):
             raise serializers.ValidationError("No valid fields found in request data.")
         return data
+    
+    def vaildate_artist_id(self, value):
+        artist = fetch_one("artist/get_artist_by_id.sql", [value])
+        if not artist:
+            raise serializers.ValidationError("Invalid artist ID.")
+        return value
+        
 
     def validate_album_cover(self, file):
         print("album cover File",file)
