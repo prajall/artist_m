@@ -1,22 +1,18 @@
 "use client";
 
+import CustomPagination from "@/components/Pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useArtists } from "@/lib/hooks/useArtists";
+import { Edit, Eye, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { ArtistForm } from "../../../components/forms/ArtistForm";
 import { Button } from "../../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
+import { Card, CardContent } from "../../../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,14 +20,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../../components/ui/dialog";
-import { useArtists } from "@/lib/hooks/useArtists";
-import { deleteArtist } from "@/lib/actions/artists";
-import { ArtistForm } from "../../../components/forms/artist-form";
+
+const SERVER_BASE_URL = process.env.SERVER_BASE_URL || "http://localhost:8000";
 
 export default function ArtistsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const { data, loading, error } = useArtists(page, 10);
+  const { artists, isLoading, error, totalArtists, deleteArtist } =
+    useArtists();
 
   const canCreate = true;
   const canUpdate = true;
@@ -44,16 +40,15 @@ export default function ArtistsPage() {
     if (confirm("Are you sure you want to delete this artist?")) {
       try {
         await deleteArtist(id);
-        refetch();
       } catch (error) {
         console.error("Failed to delete artist:", error);
       }
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!data) return <div>No data</div>;
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div className="text-red-500">Error: {error.message}</div>;
+  if (!artists) return <div>No data</div>;
 
   return (
     <div className="space-y-4">
@@ -74,7 +69,6 @@ export default function ArtistsPage() {
               <ArtistForm
                 onSuccess={() => {
                   setIsCreateOpen(false);
-                  refetch();
                 }}
               />
             </DialogContent>
@@ -82,49 +76,59 @@ export default function ArtistsPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Artists ({data.total})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Artist Name</TableHead>
-                <TableHead>Real Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Manager</TableHead>
-                <TableHead>First Release</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.data.map((artist) => (
-                <TableRow key={artist.id}>
-                  <TableCell className="font-medium">
-                    {artist.artist_name}
-                  </TableCell>
-                  <TableCell>
-                    {artist.first_name} {artist.last_name}
-                  </TableCell>
-                  <TableCell>{artist.email}</TableCell>
-                  <TableCell>
-                    {artist.manager_first_name && artist.manager_last_name
-                      ? `${artist.manager_first_name} ${artist.manager_last_name}`
-                      : "No Manager"}
-                  </TableCell>
-                  <TableCell>{artist.first_release_year || "N/A"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        {artists.map((artist) => (
+          <Card
+            key={artist.id}
+            className="group relative overflow-hidden border-none shadow-none hover:bg-neutral-50/90 p-0"
+          >
+            <CardContent className="p-4">
+              {/* Image Container */}
+              <div className="mb-3">
+                <div className="aspect-square rounded-full overflow-hidden bg-muted">
+                  {artist.profile_image && (
+                    <img
+                      src={`${SERVER_BASE_URL}/${artist.profile_image}`}
+                      alt={artist.artist_name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 "
+                    />
+                  )}
+                  {!artist.profile_image && (
+                    <img
+                      src={
+                        "https://www.pixsector.com/cache/517d8be6/av5c8336583e291842624.png"
+                      }
+                      alt={artist.artist_name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-50"
+                    />
+                  )}
+                </div>
+
+                <div className="absolute top-2 right-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8  text-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => {}}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
                       {canUpdate && (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Artist
+                            </DropdownMenuItem>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
@@ -133,48 +137,42 @@ export default function ArtistsPage() {
                             <ArtistForm
                               artistId={artist.id}
                               initialData={artist}
-                              onSuccess={refetch}
+                              onSuccess={() => {
+                                setIsCreateOpen(false);
+                              }}
                             />
                           </DialogContent>
                         </Dialog>
                       )}
                       {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <DropdownMenuItem
                           onClick={() => handleDelete(artist.id)}
+                          className="text-destructive focus:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Artist
+                        </DropdownMenuItem>
                       )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
 
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-        >
-          Previous
-        </Button>
-        <span>
-          Page {page} of {Math.ceil(data.total / 10)}
-        </span>
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => p + 1)}
-          disabled={page >= Math.ceil(data.total / 10)}
-        >
-          Next
-        </Button>
+              <div className="space-y-1 text-center">
+                <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                  {artist.artist_name}
+                </h3>
+
+                <p className="text-xs text-muted-foreground truncate">
+                  {artist.first_name} {artist.last_name}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      <CustomPagination total={totalArtists} />
     </div>
   );
 }

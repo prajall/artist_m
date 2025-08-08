@@ -10,7 +10,6 @@ const fetchUsers = async (
   page: number,
   limit: number
 ): Promise<PaginatedResponse<User>> => {
-  const offset = (page - 1) * limit;
   const response = await apiRequest.get(`/user/?limit=${limit}&page=${page}`);
   const data = await response.data?.data;
   console.log("Fetched users:", data);
@@ -54,7 +53,13 @@ const updateUser = async ({
   id: number;
   data: Partial<CreateUserData>;
 }): Promise<User> => {
-  const response = await apiRequest.patch(`/user/${id}/`);
+  const formData = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, value as any);
+    }
+  });
+  const response = await apiRequest.patch(`/user/${id}/`, formData);
 
   return response.data;
 };

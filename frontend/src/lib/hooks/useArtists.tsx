@@ -4,25 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Artist, CreateArtistData, PaginatedResponse } from "@/types";
+import { apiRequest } from "../api";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
-// API functions
 const fetchArtists = async (
   page: number,
   limit: number
 ): Promise<PaginatedResponse<Artist>> => {
-  const offset = (page - 1) * limit;
-  const response = await fetch(
-    `${API_BASE_URL}/artist?limit=${limit}&offset=${offset}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch artists");
-  }
-
-  const data = await response.json();
+  const response = await apiRequest.get(`/artist/?limit=${limit}&page=${page}`);
+  const data = await response.data?.data;
+  console.log("Fetched artists:", data);
   return {
     data: data.artists,
     total: data.total_artists,
@@ -32,29 +22,14 @@ const fetchArtists = async (
 };
 
 const fetchArtistById = async (id: number): Promise<Artist> => {
-  const response = await fetch(`${API_BASE_URL}/artist/${id}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch artist");
-  }
-
-  return response.json();
+  const response = await apiRequest.get(`/artist/${id}/`);
+  return response.data;
 };
 
 const createArtist = async (artistData: CreateArtistData): Promise<Artist> => {
-  const response = await fetch(`${API_BASE_URL}/artist`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(artistData),
-  });
+  const response = await apiRequest.post(`/artist/`, artistData);
 
-  if (!response.ok) {
-    throw new Error("Failed to create artist");
-  }
-
-  return response.json();
+  return response.data;
 };
 
 const updateArtist = async ({
@@ -64,29 +39,13 @@ const updateArtist = async ({
   id: number;
   data: Partial<CreateArtistData>;
 }): Promise<Artist> => {
-  const response = await fetch(`${API_BASE_URL}/artist/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update artist");
-  }
-
-  return response.json();
+  delete data.user_id;
+  const response = await apiRequest.patch(`/artist/${id}/`, data);
+  return response.data;
 };
 
 const deleteArtist = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/artist/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete artist");
-  }
+  return await apiRequest.delete(`/artist/${id}/`);
 };
 
 export const useArtists = () => {
@@ -95,7 +54,6 @@ export const useArtists = () => {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = 10;
 
-  // Fetch artists list
   const { data, error, isFetching, isPending } = useQuery<
     PaginatedResponse<Artist>
   >({
@@ -104,7 +62,6 @@ export const useArtists = () => {
     staleTime: 10 * 1000,
   });
 
-  // Fetch single artist
   const getArtistById = (id: number) => {
     return useQuery<Artist>({
       queryKey: ["artist", id],
@@ -114,7 +71,6 @@ export const useArtists = () => {
     });
   };
 
-  // Create artist mutation
   const createArtistMutation = useMutation({
     mutationKey: ["artists"],
     mutationFn: createArtist,
@@ -131,7 +87,6 @@ export const useArtists = () => {
     },
   });
 
-  // Update artist mutation
   const updateArtistMutation = useMutation({
     mutationKey: ["artists"],
     mutationFn: updateArtist,
@@ -149,7 +104,6 @@ export const useArtists = () => {
     },
   });
 
-  // Delete artist mutation
   const deleteArtistMutation = useMutation({
     mutationKey: ["artists"],
     mutationFn: deleteArtist,
@@ -167,29 +121,23 @@ export const useArtists = () => {
   });
 
   return {
-    // Data
     artists: data?.data || [],
     totalArtists: data?.total || 0,
     currentPage: page,
     totalPages: data ? Math.ceil(data.total / limit) : 0,
 
-    // Loading states
     isLoading: isPending,
-    isFetching,
     isCreating: createArtistMutation.isPending,
     isUpdating: updateArtistMutation.isPending,
     isDeleting: deleteArtistMutation.isPending,
 
-    // Error
     error,
 
-    // Actions
-    createArtist: createArtistMutation.mutate,
-    updateArtist: updateArtistMutation.mutate,
-    deleteArtist: deleteArtistMutation.mutate,
+    createArtist: createArtistMutation.mutateAsync,
+    updateArtist: updateArtistMutation.mutateAsync,
+    deleteArtist: deleteArtistMutation.mutateAsync,
     getArtistById,
 
-    // Metadata
     metaData: {
       count: data?.total,
       page: data?.page,

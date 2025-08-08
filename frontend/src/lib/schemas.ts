@@ -29,13 +29,13 @@ export const songSchema = z.object({
   artist_id: z.number().min(1, "Artist is required"),
   album_name: z.string().optional(),
   genre: z.string().optional(),
-  song_cover: z.string().url("Invalid URL").optional().or(z.literal("")),
+  song_cover: z.file().optional(),
 });
 
 export const albumSchema = z.object({
   album_name: z.string().min(1, "Album name is required"),
   artist_id: z.number().min(1, "Artist is required"),
-  album_cover: z.string().url("Invalid URL").optional().or(z.literal("")),
+  album_cover: z.file().optional(),
 });
 
 export const loginSchema = z.object({

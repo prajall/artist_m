@@ -4,6 +4,8 @@ from django.contrib.auth.hashers import make_password,check_password
 import jwt
 from django.conf import settings
 from datetime import datetime
+from app.utils import save_image_file
+
 
 ROLE_CHOICE = (
     ('super_admin','Super Admin'),
@@ -70,7 +72,8 @@ class BaseUserSerializer(serializers.Serializer):
     def validate_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be atleast 8 characters long")
-        return value
+        hashed_password = make_password(value)
+        return hashed_password
 
     def validate_phone(self, value):
         if not len(value) == 10:
@@ -93,20 +96,27 @@ class BaseUserSerializer(serializers.Serializer):
 
         return image
 
+    def validate_profile_image(self, file):
+        print("\n\nValidating profile image",file)
+        return save_image_file(file, "profile_image")
+    
+
 class UserSerializer(BaseUserSerializer):
     
     def validate_email(self, value):
+        if self.instance and self.instance['email'] == value:
+            return value
         result = fetch_one("user/get_email.sql", [value])
         if result and result["exists"]:
             raise serializers.ValidationError("Email already exists")
         return value  
 
     def create(self, validated_data):
-        hashed_password = make_password(validated_data['password'])
+        
         print("profile image",validated_data['profile_image'])
         params = [
             validated_data['email'],
-            hashed_password,
+            validated_data['password'],
             validated_data['first_name'],
             validated_data['last_name'],
             validated_data['role'],
@@ -130,7 +140,7 @@ class UserSerializer(BaseUserSerializer):
         new_data = validated_data.items()
         columns = []
         params = {}
-        allowed_fields = ['first_name','last_name','phone','dob','address','gender']
+        allowed_fields = ['first_name','last_name','phone','dob','address','gender','profile_image']
 
         for (key, value) in new_data:
             if key not in allowed_fields:

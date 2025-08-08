@@ -17,6 +17,7 @@ export interface Artist {
   id: number;
   artist_name: string;
   first_release_year?: number;
+  profile_image?: string;
   created_at: string;
   manager_id?: number;
   manager_first_name?: string;

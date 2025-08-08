@@ -1,7 +1,20 @@
 "use client";
 
+import CustomPagination from "@/components/Pagination";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAlbums } from "@/lib/hooks/useAlbums";
+import {
+  Edit,
+  EllipsisVertical,
+  Eye,
+  Menu,
+  Music,
+  Option,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
-import { Plus, Edit, Trash2, Eye, Music } from "lucide-react";
+import { AlbumForm } from "../../../components/forms/AlbumForm";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -10,56 +23,42 @@ import {
   CardTitle,
 } from "../../../components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../../components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAlbums } from "@/lib/hooks/useAlbums";
-import { getCurrentUser, hasAccess } from "@/lib/actions/auth";
-import { deleteAlbum } from "@/lib/actions/albums";
-import { AlbumForm } from "../../../components/forms/album-form";
+
+const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+
+console.log(SERVER_BASE_URL);
 
 export default function AlbumsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const { data, loading, error, refetch } = useAlbums(page, 10);
+  const { albums, isLoading, error, deleteAlbum, totalAlbums } = useAlbums();
 
-  // For demo purposes - in real app, get from auth context
-  const currentUser = {
-    id: 1,
-    role: "super_admin" as const,
-    email: "admin@example.com",
-  };
-
-  const canCreate = hasAccess(currentUser.role, "albums", "create");
-  const canUpdate = hasAccess(currentUser.role, "albums", "update");
-  const canDelete = hasAccess(currentUser.role, "albums", "delete");
+  // const canCreate = hasAccess(currentUser.role, "albums", "create");
+  // const canUpdate = hasAccess(currentUser.role, "albums", "update");
+  // const canDelete = hasAccess(currentUser.role, "albums", "delete");
+  const canCreate = true;
+  const canUpdate = true;
+  const canDelete = true;
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this album?")) {
       try {
         await deleteAlbum(id);
-        refetch();
       } catch (error) {
         console.error("Failed to delete album:", error);
       }
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!data) return <div>No data</div>;
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!albums) return <div>No data</div>;
 
   return (
     <div className="space-y-4">
@@ -80,7 +79,6 @@ export default function AlbumsPage() {
               <AlbumForm
                 onSuccess={() => {
                   setIsCreateOpen(false);
-                  refetch();
                 }}
               />
             </DialogContent>
@@ -90,32 +88,48 @@ export default function AlbumsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Albums ({data.total})</CardTitle>
+          <CardTitle>All Albums ({totalAlbums})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {data.data.map((album) => (
-              <Card key={album.id} className="overflow-hidden">
-                <div className="aspect-square relative">
+            {albums.map((album) => (
+              <Card
+                key={album.id}
+                className="overflow-hidden border-none shadow-none p-0 rounded-none"
+              >
+                <div className="aspect-square relative ">
                   <Avatar className="w-full h-full rounded-none">
-                    <AvatarImage
-                      src={album.album_cover || "/placeholder.svg"}
-                      alt={album.album_name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="rounded-none">
-                      <Music className="h-12 w-12" />
-                    </AvatarFallback>
+                    {album.album_cover && (
+                      <>
+                        <AvatarImage
+                          src={SERVER_BASE_URL + album.album_cover}
+                          alt={album.album_name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="rounded-none">
+                          <Music className="h-12 w-12" />
+                        </AvatarFallback>
+                      </>
+                    )}
+                    {!album.album_cover && (
+                      <AvatarFallback className="rounded-none">
+                        <Music className="h-12 w-12" />
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                 </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-1 truncate">
-                    {album.album_name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    by {album.artist_name}
-                  </p>
-                  <div className="flex items-center gap-2">
+                <CardContent className="p-0 flex justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1 truncate">
+                      {album.album_name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      by {album.artist_name}
+                    </p>
+                  </div>
+                  <EllipsisVertical />
+
+                  {/* <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm">
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -133,7 +147,9 @@ export default function AlbumsPage() {
                           <AlbumForm
                             albumId={album.id}
                             initialData={album}
-                            onSuccess={refetch}
+                            onSuccess={() => {
+                              setIsCreateOpen(false);
+                            }}
                           />
                         </DialogContent>
                       </Dialog>
@@ -147,43 +163,22 @@ export default function AlbumsPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {data.data.length === 0 && (
+          {albums.length === 0 && (
             <div className="text-center py-12">
               <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No albums found</h3>
-              <p className="text-muted-foreground">
-                Get started by creating your first album.
-              </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-        >
-          Previous
-        </Button>
-        <span>
-          Page {page} of {Math.ceil(data.total / 10)}
-        </span>
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => p + 1)}
-          disabled={page >= Math.ceil(data.total / 10)}
-        >
-          Next
-        </Button>
-      </div>
+      <CustomPagination total={totalAlbums} />
     </div>
   );
 }

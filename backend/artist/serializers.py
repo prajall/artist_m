@@ -8,7 +8,7 @@ class ArtistSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     artist_name = serializers.CharField(min_length = 3)
     manager_id = serializers.IntegerField()
-    first_release_year = serializers.DateField()
+    first_release_year = serializers.IntegerField(min_value=1900, max_value=2025)
     no_of_albums_released = serializers.IntegerField(min_value=0,read_only=True, default=0)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
@@ -73,11 +73,6 @@ class ArtistSerializer(serializers.Serializer):
             for field, value in validated_data.items():
                 field_values.append(f"{field} = '{value}'")  
                 
-            # params = {
-            #     "artist_name":validated_data['artist_name'],
-            #     "manager_id": validated_data['manager_id'],
-            #     "first_release_year": validated_data['first_release_year'],
-            # }
 
             query = f"""
                 UPDATE Artists

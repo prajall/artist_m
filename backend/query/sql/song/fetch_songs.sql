@@ -1,7 +1,6 @@
 SELECT  s.id, 
         s.title,
         s.artist_id,
-        s.album_name,
         s.genre,
         s.song_cover,
         a.artist_name,

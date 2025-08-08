@@ -20,10 +20,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { createAlbum, updateAlbum } from "@/lib/actions/albums";
-import { getArtists } from "@/lib/actions/artists";
 import { Album, Artist } from "@/types";
 import { albumSchema, AlbumFormData } from "@/lib/schemas";
+import { useArtists } from "@/lib/hooks/useArtists";
+import { useAlbums } from "@/lib/hooks/useAlbums";
 
 interface AlbumFormProps {
   albumId?: number;
@@ -32,7 +32,10 @@ interface AlbumFormProps {
 }
 
 export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
-  const [artists, setArtists] = useState<Artist[]>([]);
+  const { albums, isLoading, error, createAlbum, updateAlbum } = useAlbums();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   const form = useForm<AlbumFormData>({
     resolver: zodResolver(albumSchema),
@@ -45,31 +48,48 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
 
   const watchedCover = form.watch("album_cover");
 
-  useEffect(() => {
-    async function fetchArtists() {
-      try {
-        const response = await getArtists(1, 100);
-        setArtists(response.data);
-      } catch (error) {
-        console.error("Failed to fetch artists:", error);
-      }
-    }
-    fetchArtists();
-  }, []);
-
   const onSubmit = async (data: AlbumFormData) => {
     try {
       if (albumId) {
-        await updateAlbum(albumId, data);
+        await updateAlbum({ id: albumId, data });
       } else {
         await createAlbum(data);
       }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save album:", error);
-      form.setError("root", {
-        message: "Failed to save album. Please try again.",
-      });
+
+      if (error.response) {
+        const details = error.response.data?.detail;
+
+        form.setError("root", {
+          message:
+            error.response.data?.message ||
+            "Failed to save album. Please try again.",
+        });
+
+        if (details && typeof details === "object") {
+          Object.entries(details).forEach(([key, value]) => {
+            if (key in form.getValues()) {
+              form.setError(key as any, {
+                message: value as string,
+              });
+            } else {
+              form.setError("root", {
+                message: value as string,
+              });
+            }
+          });
+        } else {
+          form.setError("root", {
+            message: details || "Failed to save album. Please try again.",
+          });
+        }
+      } else {
+        form.setError("root", {
+          message: "Failed to save album. Please try again.",
+        });
+      }
     }
   };
 

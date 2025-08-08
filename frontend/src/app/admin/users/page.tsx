@@ -4,7 +4,7 @@ import Pagination from "@/components/Pagination";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { Edit, Eye, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { UserForm } from "../../../components/forms/user-form";
+import { UserForm } from "../../../components/forms/UserForm";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -22,7 +22,7 @@ import {
 import {
   Table,
   TableBody,
-  TableCell,
+TableCell,
   TableHead,
   TableHeader,
   TableRow,

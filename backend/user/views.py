@@ -20,6 +20,7 @@ class UserListCreateView(APIView):
     
     def post(self, request):
         data = request.data.copy()
+
         print("Data", data)
         try:
 
@@ -28,15 +29,6 @@ class UserListCreateView(APIView):
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
 
-            validated_data = serializer.validated_data
-            if validated_data.get("profile_image"):
-                image = validated_data['profile_image']
-                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'user_profile'))
-                filename = fs.save(image.name, image)
-                profile_image_url = settings.MEDIA_URL + 'user_profile/' + filename
-                validated_data['profile_image'] = profile_image_url
-            else:
-                validated_data['profile_image'] = None
             user = serializer.save()
             del user['password'] 
             return api_response(status.HTTP_201_CREATED, "User created successfully", user)
@@ -49,7 +41,21 @@ class UserListCreateView(APIView):
         print("Authenticated user",request.user)
         page = int(request.query_params.get('page', 1))
         limit = int(request.query_params.get('limit', 12))
-        users = fetch_many_dict(path="user/fetch_users.sql", limit=limit, page=page)
+        search = request.GET.get("search",None)
+        role = request.GET.get("role",None)
+
+        if not role in ["super_admin", "artist_manager", "artist","user"]:
+            role=None
+        
+        
+        params = {
+            'search': search,
+            'search_pattern': f"%{search}%" if search and search.strip() else None,
+            'role': role,
+            'limit': limit,
+            'offset': (page - 1) * limit
+        }
+        users = fetch_many_dict(path="user/fetch_users.sql",params=params, limit=limit, page=page)
         total_users = fetch_one("user/user_count.sql")
 
         return api_response(status.HTTP_200_OK, "User fetched successfully", {"total_users": total_users['count'],"users": users})
@@ -78,12 +84,6 @@ class UserDetailView(APIView):
         print("request data", request.data)
         print("User_id",user_id)
         try:
-            if 'profile_image' in request.FILES:
-                image = request.FILES['profile_image']
-                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'user_profile'))
-                filename = fs.save(image.name, image)
-                profile_image_url = settings.MEDIA_URL + 'user_profile/' + filename
-                data['profile_image'] = profile_image_url
 
             user = self.get_user(user_id)
             print("User", user)

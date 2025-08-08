@@ -44,6 +44,9 @@ class AlbumListCreateView(APIView):
     
             return api_response(status.HTTP_201_CREATED, "Album created successfully", {"album":new_album})
 
+        except serializers.ValidationError as e:
+            return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", e.detail)
+        
         except Exception as e:
             print("Error creating album", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

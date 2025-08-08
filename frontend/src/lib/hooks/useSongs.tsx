@@ -4,33 +4,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Song, CreateSongData, PaginatedResponse } from "@/types";
+import { apiRequest } from "../api";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
-// API functions
 const fetchSongs = async (
   page: number,
   limit: number,
   artistId?: number,
   managerId?: number
 ): Promise<PaginatedResponse<Song>> => {
-  const offset = (page - 1) * limit;
   const params = new URLSearchParams({
     limit: limit.toString(),
-    offset: offset.toString(),
+    page: page.toString(),
   });
 
   if (artistId) params.append("artist_id", artistId.toString());
   if (managerId) params.append("manager_id", managerId.toString());
 
-  const response = await fetch(`${API_BASE_URL}/song?${params.toString()}`);
+  const response = await apiRequest.get(`/song/?${params.toString()}`);
+  console.log("Songs response:", response.data);
+  const data = response.data?.data;
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch songs");
-  }
-
-  const data = await response.json();
   return {
     data: data.songs,
     total: data.total_songs,
@@ -40,29 +33,28 @@ const fetchSongs = async (
 };
 
 const fetchSongById = async (id: number): Promise<Song> => {
-  const response = await fetch(`${API_BASE_URL}/song/${id}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch song");
-  }
-
-  return response.json();
+  const response = await apiRequest.get(`/song/${id}/`);
+  return response.data;
 };
 
 const createSong = async (songData: CreateSongData): Promise<Song> => {
-  const response = await fetch(`${API_BASE_URL}/song`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(songData),
-  });
+  try {
+    const formData = new FormData();
+    Object.entries(songData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value as any);
+      }
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to create song");
+    const response = await apiRequest.post(`/song/`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
   }
-
-  return response.json();
 };
 
 const updateSong = async ({
@@ -72,29 +64,25 @@ const updateSong = async ({
   id: number;
   data: Partial<CreateSongData>;
 }): Promise<Song> => {
-  const response = await fetch(`${API_BASE_URL}/song/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+  const formData = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, value as any);
+    }
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to update song");
-  }
+  const response = await apiRequest.patch(`/song/${id}/`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
-  return response.json();
+  return response.data;
 };
 
-const deleteSong = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/song/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete song");
-  }
+const deleteSong = async (id: number) => {
+  const response = await apiRequest.delete(`/song/${id}/`);
+  return response.data;
 };
 
 export const useSongs = (artistId?: number, managerId?: number) => {
@@ -103,16 +91,12 @@ export const useSongs = (artistId?: number, managerId?: number) => {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = 10;
 
-  // Fetch songs list
-  const { data, error, isFetching, isPending } = useQuery<
-    PaginatedResponse<Song>
-  >({
+  const { data, error, isPending } = useQuery<PaginatedResponse<Song>>({
     queryKey: ["songs", page, limit, artistId, managerId],
     queryFn: () => fetchSongs(page, limit, artistId, managerId),
     staleTime: 10 * 1000,
   });
 
-  // Fetch single song
   const getSongById = (id: number) => {
     return useQuery<Song>({
       queryKey: ["song", id],
@@ -122,7 +106,6 @@ export const useSongs = (artistId?: number, managerId?: number) => {
     });
   };
 
-  // Create song mutation
   const createSongMutation = useMutation({
     mutationKey: ["songs"],
     mutationFn: createSong,
@@ -133,13 +116,16 @@ export const useSongs = (artistId?: number, managerId?: number) => {
       toast.success("Song created successfully", { id: "song-create" });
       queryClient.invalidateQueries({ queryKey: ["songs"] });
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error("Error creating song:", err);
-      toast.error("Failed to create song", { id: "song-create" });
+      if (err.response) {
+        toast.error(err.response.data.message, { id: "song-create" });
+      } else {
+        toast.error("Failed to create song", { id: "song-create" });
+      }
     },
   });
 
-  // Update song mutation
   const updateSongMutation = useMutation({
     mutationKey: ["songs"],
     mutationFn: updateSong,
@@ -157,7 +143,6 @@ export const useSongs = (artistId?: number, managerId?: number) => {
     },
   });
 
-  // Delete song mutation
   const deleteSongMutation = useMutation({
     mutationKey: ["songs"],
     mutationFn: deleteSong,
@@ -175,29 +160,23 @@ export const useSongs = (artistId?: number, managerId?: number) => {
   });
 
   return {
-    // Data
     songs: data?.data || [],
     totalSongs: data?.total || 0,
     currentPage: page,
     totalPages: data ? Math.ceil(data.total / limit) : 0,
 
-    // Loading states
     isLoading: isPending,
-    isFetching,
     isCreating: createSongMutation.isPending,
     isUpdating: updateSongMutation.isPending,
     isDeleting: deleteSongMutation.isPending,
 
-    // Error
     error,
 
-    // Actions
-    createSong: createSongMutation.mutate,
-    updateSong: updateSongMutation.mutate,
-    deleteSong: deleteSongMutation.mutate,
+    createSong: createSongMutation.mutateAsync,
+    updateSong: updateSongMutation.mutateAsync,
+    deleteSong: deleteSongMutation.mutateAsync,
     getSongById,
 
-    // Metadata
     metaData: {
       count: data?.total,
       page: data?.page,

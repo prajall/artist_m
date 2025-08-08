@@ -4,31 +4,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Album, CreateAlbumData, PaginatedResponse } from "@/types";
+import { apiRequest } from "../api";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
-// API functions
 const fetchAlbums = async (
   page: number,
   limit: number,
   artistId?: number
 ): Promise<PaginatedResponse<Album>> => {
-  const offset = (page - 1) * limit;
   const params = new URLSearchParams({
     limit: limit.toString(),
-    offset: offset.toString(),
+    page: page.toString(),
   });
 
   if (artistId) params.append("artist_id", artistId.toString());
 
-  const response = await fetch(`${API_BASE_URL}/album?${params.toString()}`);
+  const response = await apiRequest.get(`/album/?${params.toString()}`);
+  const data = response.data?.data;
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch albums");
-  }
+  console.log("Albums response:", response.data);
 
-  const data = await response.json();
   return {
     data: data.albums,
     total: data.total_albums,
@@ -38,29 +32,28 @@ const fetchAlbums = async (
 };
 
 const fetchAlbumById = async (id: number): Promise<Album> => {
-  const response = await fetch(`${API_BASE_URL}/album/${id}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch album");
-  }
-
-  return response.json();
+  const response = await apiRequest.get(`/album/${id}/`);
+  return response.data;
 };
 
 const createAlbum = async (albumData: CreateAlbumData): Promise<Album> => {
-  const response = await fetch(`${API_BASE_URL}/album`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(albumData),
-  });
+  try {
+    const formData = new FormData();
+    Object.entries(albumData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value as any);
+      }
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to create album");
+    const response = await apiRequest.post(`/album/`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
   }
-
-  return response.json();
 };
 
 const updateAlbum = async ({
@@ -70,29 +63,25 @@ const updateAlbum = async ({
   id: number;
   data: Partial<CreateAlbumData>;
 }): Promise<Album> => {
-  const response = await fetch(`${API_BASE_URL}/album/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+  const formData = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, value as any);
+    }
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to update album");
-  }
+  const response = await apiRequest.patch(`/album/${id}/`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
-  return response.json();
+  return response.data;
 };
 
-const deleteAlbum = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/album/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete album");
-  }
+const deleteAlbum = async (id: number) => {
+  const response = await apiRequest.delete(`/album/${id}/`);
+  return response.data;
 };
 
 export const useAlbums = (artistId?: number) => {
@@ -101,16 +90,12 @@ export const useAlbums = (artistId?: number) => {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = 10;
 
-  // Fetch albums list
-  const { data, error, isFetching, isPending } = useQuery<
-    PaginatedResponse<Album>
-  >({
+  const { data, error, isPending } = useQuery<PaginatedResponse<Album>>({
     queryKey: ["albums", page, limit, artistId],
     queryFn: () => fetchAlbums(page, limit, artistId),
     staleTime: 10 * 1000,
   });
 
-  // Fetch single album
   const getAlbumById = (id: number) => {
     return useQuery<Album>({
       queryKey: ["album", id],
@@ -120,7 +105,6 @@ export const useAlbums = (artistId?: number) => {
     });
   };
 
-  // Create album mutation
   const createAlbumMutation = useMutation({
     mutationKey: ["albums"],
     mutationFn: createAlbum,
@@ -131,13 +115,16 @@ export const useAlbums = (artistId?: number) => {
       toast.success("Album created successfully", { id: "album-create" });
       queryClient.invalidateQueries({ queryKey: ["albums"] });
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error("Error creating album:", err);
-      toast.error("Failed to create album", { id: "album-create" });
+      if (err.response) {
+        toast.error(err.response.data.message, { id: "album-create" });
+      } else {
+        toast.error("Failed to create album", { id: "album-create" });
+      }
     },
   });
 
-  // Update album mutation
   const updateAlbumMutation = useMutation({
     mutationKey: ["albums"],
     mutationFn: updateAlbum,
@@ -155,7 +142,6 @@ export const useAlbums = (artistId?: number) => {
     },
   });
 
-  // Delete album mutation
   const deleteAlbumMutation = useMutation({
     mutationKey: ["albums"],
     mutationFn: deleteAlbum,
@@ -173,29 +159,23 @@ export const useAlbums = (artistId?: number) => {
   });
 
   return {
-    // Data
     albums: data?.data || [],
     totalAlbums: data?.total || 0,
     currentPage: page,
     totalPages: data ? Math.ceil(data.total / limit) : 0,
 
-    // Loading states
     isLoading: isPending,
-    isFetching,
     isCreating: createAlbumMutation.isPending,
     isUpdating: updateAlbumMutation.isPending,
     isDeleting: deleteAlbumMutation.isPending,
 
-    // Error
     error,
 
-    // Actions
-    createAlbum: createAlbumMutation.mutate,
-    updateAlbum: updateAlbumMutation.mutate,
-    deleteAlbum: deleteAlbumMutation.mutate,
+    createAlbum: createAlbumMutation.mutateAsync,
+    updateAlbum: updateAlbumMutation.mutateAsync,
+    deleteAlbum: deleteAlbumMutation.mutateAsync,
     getAlbumById,
 
-    // Metadata
     metaData: {
       count: data?.total,
       page: data?.page,

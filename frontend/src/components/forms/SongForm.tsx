@@ -20,10 +20,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { createSong, updateSong } from "@/lib/actions/songs";
-import { getArtists } from "@/lib/actions/artists";
 import { Song, Artist } from "@/types";
 import { songSchema, SongFormData } from "@/lib/schemas";
+import { useSongs } from "@/lib/hooks/useSongs";
+import { apiRequest } from "@/lib/api";
 
 interface SongFormProps {
   songId?: number;
@@ -33,6 +33,7 @@ interface SongFormProps {
 
 export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const { songs, isLoading, error, createSong, updateSong } = useSongs();
 
   const form = useForm<SongFormData>({
     resolver: zodResolver(songSchema),
@@ -45,31 +46,61 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
     },
   });
 
-  useEffect(() => {
-    async function fetchArtists() {
-      try {
-        const response = await getArtists(1, 100);
-        setArtists(response.data);
-      } catch (error) {
-        console.error("Failed to fetch artists:", error);
-      }
+  const getArtists = async () => {
+    try {
+      const response = await apiRequest.get("/artist/");
+      setArtists(response.data?.data.artists);
+    } catch (error) {
+      console.error("Failed to fetch artists:", error);
     }
-    fetchArtists();
+  };
+
+  useEffect(() => {
+    getArtists();
   }, []);
 
   const onSubmit = async (data: SongFormData) => {
     try {
       if (songId) {
-        await updateSong(songId, data);
+        await updateSong({ id: songId, data });
       } else {
         await createSong(data);
       }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save song:", error);
-      form.setError("root", {
-        message: "Failed to save song. Please try again.",
-      });
+
+      if (error.response) {
+        const details = error.response.data?.detail;
+
+        form.setError("root", {
+          message:
+            error.response.data?.message ||
+            "Failed to save song. Please try again.",
+        });
+
+        if (details && typeof details === "object") {
+          Object.entries(details).forEach(([key, value]) => {
+            if (key in form.getValues()) {
+              form.setError(key as any, {
+                message: value as string,
+              });
+            } else {
+              form.setError("root", {
+                message: value as string,
+              });
+            }
+          });
+        } else {
+          form.setError("root", {
+            message: details || "Failed to save song. Please try again.",
+          });
+        }
+      } else {
+        form.setError("root", {
+          message: "Failed to save song. Please try again.",
+        });
+      }
     }
   };
 

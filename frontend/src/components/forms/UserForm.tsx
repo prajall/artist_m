@@ -76,6 +76,12 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
       if (error.response) {
         const details = error.response.data?.detail;
 
+        form.setError("root", {
+          message:
+            error.response.data?.message ||
+            "Failed to save user. Please try again.",
+        });
+
         if (details && typeof details === "object") {
           Object.entries(details).forEach(([key, value]) => {
             if (key in form.getValues()) {

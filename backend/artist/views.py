@@ -39,18 +39,14 @@ class ArtistListCreateView(APIView):
     def get(self,request):
         try:
             limit = int(request.GET.get("limit", 12))
-            page = int(request.GET.get("page", 1))  
+            page = int(request.GET.get("page", 1)) 
+            manager_id = request.GET.get("manager_id", None)
 
-            if request.user.role=='super_admin':
-                artists = fetch_many_dict(path="artist/fetch_artists.sql",limit=limit, page=page)
+            if request.user.role=='artist_manager':
+                manager_id = request.user.id
 
-                total = fetch_one(path="artist/fetch_artists_count.sql")
-
-            elif request.user.role=='artist_manager':
-                artists = fetch_many_dict(path="artist/fetch_artists_by_manager.sql",params={"manager_id":request.user.id},limit=limit, page=page)
-                print("Artists",artists)
-
-                total = fetch_one(path="artist/fetch_artists_count_by_manager.sql",params={"manager_id":request.user.id})
+            artists = fetch_many_dict(path="artist/fetch_artists.sql",params={"manager_id":manager_id},limit=limit, page=page)
+            total = fetch_one(path="artist/fetch_artists_count.sql",params={"manager_id":manager_id})
                 
             return api_response(status.HTTP_200_OK, "Artists fetched successfully", {"total_artists":total['total_artists'],"artists":artists})
         except Exception as e:
