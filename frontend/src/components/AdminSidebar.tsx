@@ -15,7 +15,7 @@ import {
 } from "./ui/sidebar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthProvider";
 
 const menuItems = [
   {

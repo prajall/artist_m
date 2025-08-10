@@ -96,9 +96,9 @@ class AlbumSongSerializer(serializers.Serializer):
 class ValidatedAlbumSerializer(AlbumSongSerializer):
 
     def validate_album_id(self, value):
-        request_user_id = self.context.get('user_id')
 
-        artist = fetch_one("artist/get_artist_by_user_id.sql", [request_user_id])
+        artist = fetch_one("artist/get_artist_by_id.sql", {"id": self.context.get('artist_id')})
+        print("\n\n\nArtist",self.context.get('artist_id'),artist, self.context.get('user').role)
         if not artist:
             raise serializers.ValidationError("Artist not found.")
         artist_id = artist['id']
@@ -107,7 +107,8 @@ class ValidatedAlbumSerializer(AlbumSongSerializer):
         if not album:
             raise serializers.ValidationError(f"Invalid album ID: {value}")
 
-        if album['artist_id'] != artist_id:
+        print("\n\n\nAlbum",album,artist_id, self.context.get('user').role)
+        if album['artist_id'] != artist_id or self.context.get('user').role != "super_admin":
             raise serializers.ValidationError("You do not have permission to modify this album.")
 
         return value
@@ -115,9 +116,8 @@ class ValidatedAlbumSerializer(AlbumSongSerializer):
 class ValidatedSongSerializer(AlbumSongSerializer):
 
     def validate_song_id(self, value):
-        request_user_id = self.context.get('user_id')
 
-        artist = fetch_one("artist/get_artist_by_user_id.sql", [request_user_id])
+        artist = fetch_one("artist/get_artist_by_user_id.sql", self.context.get('artist_id'))
         if not artist:
             raise serializers.ValidationError("Artist not found.")
         artist_id = artist['id']

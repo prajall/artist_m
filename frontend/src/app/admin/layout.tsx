@@ -3,7 +3,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "../../components/ui/sidebar";
-import { AdminSidebar } from "../../components/admin-sidebar";
+import { AdminSidebar } from "../../components/AdminSidebar";
 import { Separator } from "../../components/ui/separator";
 import UserIcon from "@/components/UserIcon";
 

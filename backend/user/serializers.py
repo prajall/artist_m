@@ -140,7 +140,7 @@ class UserSerializer(BaseUserSerializer):
         new_data = validated_data.items()
         columns = []
         params = {}
-        allowed_fields = ['first_name','last_name','phone','dob','address','gender','profile_image']
+        allowed_fields = ['first_name','last_name','phone','dob','address','gender','profile_image','email']
 
         for (key, value) in new_data:
             if key not in allowed_fields:

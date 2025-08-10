@@ -14,11 +14,16 @@ class ArtistSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField(read_only=True)
 
     def validate_user_id(self, value):
+        bypass_role_check = self.context.get("bypass_role_check")
+        if bypass_role_check:
+            return value
+        
         user = fetch_one("user/fetch_user_detail.sql", [value])
+        print("User from user_id validation", user)
         if not user:
             raise serializers.ValidationError("User with this ID does not exist")
         if not user['role'] == 'user':    
-            raise serializers.ValidationError("User with this has a different role")
+            raise serializers.ValidationError("User has a different role")
         if fetch_one("artist/get_artist_by_user_id.sql", [value]):
             raise serializers.ValidationError("Artist with this User ID already exists")
         return value

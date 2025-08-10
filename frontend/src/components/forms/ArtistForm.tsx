@@ -38,7 +38,10 @@ interface ArtistFormProps {
   onSuccess: () => void;
 }
 
-const searchUsers = async (query: string, role: string): Promise<User[]> => {
+export const searchUsers = async (
+  query: string,
+  role: string
+): Promise<User[]> => {
   try {
     const response = await apiRequest.get(
       `/user/?search=${encodeURIComponent(query)}&role=${role}`
@@ -50,8 +53,7 @@ const searchUsers = async (query: string, role: string): Promise<User[]> => {
   }
 };
 
-// User Search Component
-const UserSearch = ({
+export const UserSearch = ({
   role,
   value,
   onChange,
@@ -112,14 +114,14 @@ const UserSearch = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             // role="combobox"
             // aria-expanded={open}
-            className="flex-1 justify-between"
+            className="flex-1  justify-between"
           >
             {selectedUser ? (
               <span className="truncate">
@@ -299,7 +301,7 @@ export function ArtistForm({
           name="manager_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Manager (Optional)</FormLabel>
+              <FormLabel>Artist's Manager </FormLabel>
               <FormControl>
                 <UserSearch
                   role="artist_manager"

@@ -22,7 +22,7 @@ import {
 import {
   Table,
   TableBody,
-TableCell,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -63,7 +63,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Users</h1>
+        <h1 className="text-2xl font-bold">Users ({totalUsers}) </h1>
         {canCreate && (
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -72,7 +72,7 @@ export default function UsersPage() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[650px] ">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
               </DialogHeader>
@@ -86,95 +86,88 @@ export default function UsersPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Users ({totalUsers})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    {user.profile_image && (
-                      <img
-                        src={`${SERVER_BASE_URL}/${user.profile_image}`}
-                        alt=""
-                        className="w-8 h-8 rounded-md object-cover"
-                      />
-                    )}
-                    {!user.profile_image && (
-                      <img
-                        src={
-                          "https://www.pixsector.com/cache/517d8be6/av5c8336583e291842624.png"
-                        }
-                        alt=""
-                        className="w-8 h-8 rounded-md object-cover opacity-50"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="flex gap-2 items-center">
-                    {user.first_name.charAt(0).toUpperCase() +
-                      user.first_name.slice(1)}{" "}
-                    {user.last_name.charAt(0).toUpperCase() +
-                      user.last_name.slice(1)}
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell className="">
-                    <RoleBadge role={user.role} />
-                  </TableCell>
-                  <TableCell>{user.phone || "N/A"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {canUpdate && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit User</DialogTitle>
-                            </DialogHeader>
-                            <UserForm
-                              userId={user.id}
-                              initialData={user}
-                              onSuccess={() => {}}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(user.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Image</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Phone</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell>
+                {user.profile_image && (
+                  <img
+                    src={`${SERVER_BASE_URL}/${user.profile_image}`}
+                    alt=""
+                    className="w-8 h-8 rounded-md object-cover"
+                  />
+                )}
+                {!user.profile_image && (
+                  <img
+                    src={
+                      "https://www.pixsector.com/cache/517d8be6/av5c8336583e291842624.png"
+                    }
+                    alt=""
+                    className="w-8 h-8 rounded-md object-cover opacity-50"
+                  />
+                )}
+              </TableCell>
+              <TableCell className="flex gap-2 items-center">
+                {user.first_name.charAt(0).toUpperCase() +
+                  user.first_name.slice(1)}{" "}
+                {user.last_name.charAt(0).toUpperCase() +
+                  user.last_name.slice(1)}
+              </TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell className="">
+                <RoleBadge role={user.role} />
+              </TableCell>
+              <TableCell>{user.phone || "N/A"}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {canUpdate && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit User</DialogTitle>
+                        </DialogHeader>
+                        <UserForm
+                          userId={user.id}
+                          initialData={user}
+                          onSuccess={() => {}}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(user.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       {users && users.length > 0 && <Pagination total={totalUsers} />}
     </div>

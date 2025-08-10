@@ -85,7 +85,7 @@ def bulk_data_validation(artists):
     errors = []
     valid_artists = []
     
-    # check and send errors     for row_num, data in enumerate(artist_user_datas, start=2):
+    # check and send errors     
 
     for row_num, artist in enumerate(artists,start=2):
         user = user_by_email.get(artist['email'])

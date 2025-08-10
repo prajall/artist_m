@@ -11,6 +11,8 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import OR
 import os
+from django.db import transaction
+from artist.serializers import ArtistSerializer
 
 # Create your views here.
 class UserListCreateView(APIView):
@@ -23,15 +25,23 @@ class UserListCreateView(APIView):
 
         print("Data", data)
         try:
+            with transaction.atomic():
+                serializer = UserSerializer(data=data)
 
-            serializer = UserSerializer(data=data)
+                if not serializer.is_valid():
+                    return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
 
-            if not serializer.is_valid():
-                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
-
-            user = serializer.save()
-            del user['password'] 
-            return api_response(status.HTTP_201_CREATED, "User created successfully", user)
+                user = serializer.save()
+                print("\n\n\nUser", user)
+                if data.get('artist_name'):
+                    data['user_id'] = user['id']
+                    artist_serializer = ArtistSerializer(data=data, context={"user": request.user, "bypass_role_check":True})
+                    if not artist_serializer.is_valid():
+                        return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",artist_serializer.errors)
+                    artist_serializer.save()
+                    
+                del user['password'] 
+                return api_response(status.HTTP_201_CREATED, "User created successfully", user)
             
         except Exception as e:
             print("Error creating user",e)
@@ -81,7 +91,7 @@ class UserDetailView(APIView):
 
     def patch(self, request, user_id):
         data = request.data.copy()
-        print("request data", request.data)
+        print("\n\n\n\nrequest data", request.data)
         print("User_id",user_id)
         try:
 
@@ -123,8 +133,6 @@ class LoginView(APIView):
         access= serializer.validated_data['access_token']
         refresh= serializer.validated_data['refresh_token']
         
-        
-        # return api_response(status.HTTP_200_OK,"Login Successfull",{"user":user,"access_token":access,"refresh_token":refresh})
         
         response = Response({"message":"Login Successfull","data":user},status=status.HTTP_200_OK)
         response.set_cookie(

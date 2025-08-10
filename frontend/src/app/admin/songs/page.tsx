@@ -34,7 +34,7 @@ import CustomPagination from "@/components/Pagination";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
-console.log(SERVER_BASE_URL); 
+console.log(SERVER_BASE_URL);
 export default function SongsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -65,7 +65,7 @@ export default function SongsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Songs</h1>
+        <h1 className="text-2xl font-bold">Songs({totalSongs})</h1>
         {canCreate && (
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -88,96 +88,91 @@ export default function SongsPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Songs ({totalSongs})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cover</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Artist</TableHead>
-                <TableHead>Album</TableHead>
-                <TableHead>Genre</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {songs.map((song) => (
-                <TableRow key={song.id}>
-                  <TableCell>
-                    <Avatar className="h-10 w-10">
-                      {song.song_cover && (
-                        <>
-                          <AvatarImage
-                            src={SERVER_BASE_URL + song.song_cover}
-                            alt={song.title}
-                          />
-                          <AvatarFallback>
-                            <Play className="h-4 w-4" />
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium">{song.title}</TableCell>
-                  <TableCell>{song.artist_name}</TableCell>
-                  <TableCell>{song.album_name || "Single"}</TableCell>
-                  <TableCell>
-                    {song.genre && (
-                      <Badge variant="secondary">{song.genre}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(song.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+      <Table>
+        <TableHeader>
+          <TableRow className="text-muted-foreground text-sm">
+            <TableHead>Title</TableHead>
+            <TableHead>Album</TableHead>
+            <TableHead>Genre</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {songs.map((song) => (
+            <TableRow key={song.id}>
+              <TableCell className="flex items-center gap-2 py-4">
+                <Avatar className="h-10 w-10">
+                  {song.song_cover && (
+                    <>
+                      <AvatarImage
+                        src={SERVER_BASE_URL || "" + song.song_cover}
+                        alt={song.title}
+                      />
+                      <AvatarFallback>
+                        <Play className="h-4 w-4" />
+                      </AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
+                <div>
+                  <p className="font-medium">{song.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {song.artist_name}
+                  </p>
+                </div>
+              </TableCell>
+              <TableCell>
+                {song.albums?.length ? song.albums.length : "Single"}
+              </TableCell>
+              <TableCell>
+                {song.genre && <Badge variant="secondary">{song.genre}</Badge>}
+              </TableCell>
+              <TableCell>
+                {new Date(song.created_at).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
 
-                      {canUpdate && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Edit Song</DialogTitle>
-                            </DialogHeader>
-                            <SongForm
-                              songId={song.id}
-                              initialData={song}
-                              onSuccess={() => {
-                                setIsCreateOpen(false);
-                              }}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(song.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                  {canUpdate && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Edit Song</DialogTitle>
+                        </DialogHeader>
+                        <SongForm
+                          songId={song.id}
+                          initialData={song}
+                          onSuccess={() => {
+                            setIsCreateOpen(false);
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(song.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       <CustomPagination total={totalSongs} />
     </div>

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 
 export function RoleBadge({ role }: { role: Role }) {
-  const roleMap: Record<Role, { component: React.ReactNode }> = {
+  const roleMap = {
     super_admin: {
       component: (
         <Badge className={`text-green-600 bg-green-50 capitalize `}>

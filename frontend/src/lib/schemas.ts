@@ -11,11 +11,28 @@ export const userSchema = z.object({
   address: z.string().optional(),
   dob: z.string().optional(),
   profile_image: z.file().optional(),
+
+  // artist_name: z.string().optional(),
+  // first_release_year: z.coerce
+  //   .number()
+  //   .min(1900)
+  //   .max(new Date().getFullYear())
+  //   .optional(),
+  // manager_id: z.number().optional(),
 });
+// .refine(
+//   (data) =>
+//     data.role !== "artist" ||
+//     (!!data.artist_name && !!data.first_release_year),
+//   {
+//     message: "This field is required for artist",
+//     path: ["artist_name", "first_release_year", "manager_id"],
+//   }
+// );
 
 export const artistSchema = z.object({
   artist_name: z.string().min(1, "Artist name is required"),
-  first_release_year: z
+  first_release_year: z.coerce
     .number()
     .min(1900)
     .max(new Date().getFullYear())
@@ -27,7 +44,7 @@ export const artistSchema = z.object({
 export const songSchema = z.object({
   title: z.string().min(1, "Song title is required"),
   artist_id: z.number().min(1, "Artist is required"),
-  album_name: z.string().optional(),
+  albums: z.string().optional(),
   genre: z.string().optional(),
   song_cover: z.file().optional(),
 });
@@ -35,7 +52,7 @@ export const songSchema = z.object({
 export const albumSchema = z.object({
   album_name: z.string().min(1, "Album name is required"),
   artist_id: z.number().min(1, "Artist is required"),
-  album_cover: z.file().optional(),
+  album_cover: z.instanceof(File).optional(),
 });
 
 export const loginSchema = z.object({

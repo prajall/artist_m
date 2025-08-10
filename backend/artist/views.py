@@ -11,7 +11,7 @@ from rest_framework.permissions import OR
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
-
+from django.db import transaction
 
 
 # Create your views here.
@@ -100,12 +100,14 @@ class ArtistDetailView(APIView):
         
     def delete(self, request, artist_id):
         try:
-            artist = self.get_object(artist_id)
-            if not artist:
-                return api_error(status.HTTP_404_NOT_FOUND,"Artist not found")
-            self.check_object_permissions(request,artist)
-            execute_sql("artist/delete_artist.sql", {"artist_id":artist_id})
-            return api_response(status.HTTP_204_NO_CONTENT, "Artist deleted successfully")
+            with transaction.atomic():
+                artist = self.get_object(artist_id)
+                if not artist:
+                    return api_error(status.HTTP_404_NOT_FOUND,"Artist not found")
+                self.check_object_permissions(request,artist)
+                execute_sql("artist/delete_artist.sql", {"artist_id":artist_id})
+                execute_sql("artist/set_role_to_user.sql",[artist['user_id']])
+                return api_response(status.HTTP_204_NO_CONTENT, "Artist deleted successfully")
         except (PermissionDenied, NotAuthenticated) as e:
            return api_error(status.HTTP_403_FORBIDDEN, str(e))
         except Exception as e:
@@ -125,12 +127,16 @@ class ArtistCSVUploadView(APIView):
             if request.user.role == 'artist_manager':
                 manager_id = request.user.id
                 uploaded_artists = manager_upload_artists(file,manager_id)
-            elif request.user == 'super_admin':
+                return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
+            elif request.user.role == 'super_admin':
                 uploaded_artists = s_admin_upload_artists(file)
+                return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
+            else:
+                return api_error(status.HTTP_403_FORBIDDEN, "You are not authorized to upload artists.")
         except ValueError as e:
             return api_error(status.HTTP_400_BAD_REQUEST, "CSV validation failed", str(e))
 
-        print("afterresosnesneenenenenen")
-        return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
-    
+        except Exception as e:
+            print("Error uploading artists", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
        

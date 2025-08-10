@@ -25,6 +25,7 @@ import { userSchema, UserFormData } from "@/lib/schemas";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { ImagePlus, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { UserSearch } from "./ArtistForm";
 
 interface UserFormProps {
   userId?: number;
@@ -48,6 +49,9 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
       gender: initialData?.gender || "male" || undefined,
       address: initialData?.address || "dallu",
       dob: initialData?.dob || "2020-10-10",
+      // artist_name: initialData?.artist_name || undefined,
+      // first_release_year: initialData?.first_release_year || undefined,
+      // manager_id: initialData?.manager_id || undefined,
     },
   });
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +113,7 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         {form.formState.errors.root && (
           <div className="text-sm text-red-500">
             {form.formState.errors.root.message}
@@ -185,6 +189,7 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={!!userId}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -244,6 +249,60 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
             )}
           />
         </div>
+        {/* {form.watch("role") === "artist" && (
+          <>
+            <div className="grid grid-cols-2 gap-4 animate-collapsible-down">
+              <FormField
+                control={form.control}
+                name="artist_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artist Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter artist name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="first_release_year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Release Year</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter First release year"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="manager_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Artist's Manager</FormLabel>
+                  <FormControl>
+                    <UserSearch
+                      role="artist_manager"
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Search and select manager..."
+                      label="Manager"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )} */}
         <FormField
           control={form.control}
           name="phone"

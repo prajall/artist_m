@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { Album, Artist } from "@/types";
 import { albumSchema, AlbumFormData } from "@/lib/schemas";
 import { useArtists } from "@/lib/hooks/useArtists";
 import { useAlbums } from "@/lib/hooks/useAlbums";
+import { ImagePlus, X } from "lucide-react";
 
 interface AlbumFormProps {
   albumId?: number;
@@ -33,6 +34,9 @@ interface AlbumFormProps {
 
 export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
   const { albums, isLoading, error, createAlbum, updateAlbum } = useAlbums();
+  const { artists } = useArtists();
+
+  const [image, setImage] = useState<File | null>(null);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -42,11 +46,15 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
     defaultValues: {
       album_name: initialData?.album_name || "",
       artist_id: initialData?.artist_id || 0,
-      album_cover: initialData?.album_cover || "",
+      album_cover: undefined,
     },
   });
 
-  const watchedCover = form.watch("album_cover");
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImage(e.target.files![0]);
+  };
 
   const onSubmit = async (data: AlbumFormData) => {
     try {
@@ -144,35 +152,42 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="album_cover"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Album Cover URL</FormLabel>
-              <FormControl>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/album-cover.jpg"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-              {watchedCover && (
-                <div className="mt-2">
-                  <img
-                    src={watchedCover || "/placeholder.svg"}
-                    alt="Album cover preview"
-                    className="w-32 h-32 object-cover rounded-md border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
-            </FormItem>
-          )}
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          ref={imageInputRef}
+          className="hidden"
+          onChange={handleImageChange}
         />
+        {image && (
+          // <img src={URL.createObjectURL(image)} alt="" />
+          <div className="relative w-24 h-24">
+            <img
+              src={URL.createObjectURL(image)}
+              alt={``}
+              className="w-full h-full object-cover rounded border"
+            />
+            <button
+              type="button"
+              onClick={() => setImage(null)}
+              className="absolute -top-2 -right-2 bg-red-500 bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-80"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          className="bg-white flex items-center justify-center gap-1 text-black mt-1"
+          onClick={(e) => {
+            e.preventDefault();
+            imageInputRef.current?.click();
+          }}
+        >
+          <ImagePlus size={15} />
+          Add Image
+        </Button>
 
         <Button
           type="submit"

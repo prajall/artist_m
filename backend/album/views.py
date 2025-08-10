@@ -27,7 +27,10 @@ class AlbumListCreateView(APIView):
         user_id = request.user.id
 
         try:
-            artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
+            if request.user.role == 'artist':
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
+            else:
+                artist = fetch_one("artist/get_artist_by_id.sql", {"id": data['artist_id']})
             print("Artist", artist)
             if not artist:
                 print("Artist not found")

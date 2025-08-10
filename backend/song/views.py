@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from album.serializers import ValidatedAlbumSerializer
-
+from django.db import transaction
 
 class SongListCreateView(APIView):
 
@@ -20,31 +20,38 @@ class SongListCreateView(APIView):
         data['user_id'] = request.user.id
 
         try:
-            artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
-            
             if request.user.role == 'artist':
-                data['artist_id'] = artist['id']
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+                data['artist_id'] = artist['id'] if artist else None
+            else:
+                artist = fetch_one("artist/get_artist_by_id.sql", {"id": data['artist_id']})
+                data['artist_id'] = artist['id'] if artist else None
             
-            serializer = SongSerializer(data=data, context={"user_id": request.user.id})
+            serializer = SongSerializer(data=data, context={"user_id": request.user.id, "artist_id": data['artist_id']})
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
-            new_song = serializer.save()
-            
-            # add song to albums
-            albums = request.data.get("albums")
-            print("\n Albums:", albums)
-            if albums:
-                if isinstance(albums, str):
-                    try:
-                        albums = json.loads(albums)
-                    except Exception:
-                        albums = [albums]
-                for album_id in albums:
-                    album_serializer = ValidatedAlbumSerializer(data ={"album_id": album_id,"song_id": new_song['id']}, context ={"user_id": request.user.id})
-                    album_serializer.is_valid(raise_exception=True)
-                    album_serializer.save()
-            
-            return api_response(status.HTTP_201_CREATED, "Song created successfully", new_song)
+
+            with transaction.atomic():
+                new_song = serializer.save()
+                
+                # add song to albums
+                albums = request.data.get("albums")
+                print("\n Albums:", albums)
+                if albums:
+                    if isinstance(albums, str):
+                        try:
+                            albums = json.loads(albums)
+                        except Exception:
+                            albums = [albums]
+                    for album_id in albums:
+                        album_serializer = ValidatedAlbumSerializer(
+                                            data ={"album_id": album_id,"song_id": new_song['id']},
+                                            context ={"user": request.user, "artist_id": artist['id']}
+                                        )
+                        album_serializer.is_valid(raise_exception=True)
+                        album_serializer.save()
+                
+                return api_response(status.HTTP_201_CREATED, "Song created successfully", new_song)
 
         except serializers.ValidationError as e:
             return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", e.detail)

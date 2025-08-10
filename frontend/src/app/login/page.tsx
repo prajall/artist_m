@@ -14,20 +14,21 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { loginSchema, LoginFormData } from "@/lib/schemas";
 import { apiRequest } from "@/lib/api";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
 
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = form;
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -42,9 +43,40 @@ export default function LoginPage() {
         setUser(response.data.data);
         router.push("/admin");
       }
-    } catch (err) {
-      console.log("Login error:", err);
-      setError("root", { message: "An error occurred during login" });
+    } catch (error: any) {
+      console.error("Failed to login user:", error);
+
+      if (error.response) {
+        const details = error.response.data;
+
+        form.setError("root", {
+          message:
+            error.response.data?.message ||
+            "Failed to save user. Please try again.",
+        });
+
+        if (details && typeof details === "object") {
+          Object.entries(details).forEach(([key, value]) => {
+            if (key in form.getValues()) {
+              form.setError(key as any, {
+                message: value as string,
+              });
+            } else {
+              form.setError("root", {
+                message: value as string,
+              });
+            }
+          });
+        } else {
+          form.setError("root", {
+            message: details || "Failed to save user. Please try again.",
+          });
+        }
+      } else {
+        form.setError("root", {
+          message: "Failed to save user. Please try again.",
+        });
+      }
     }
   };
 

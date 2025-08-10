@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Song, Artist } from "@/types";
+import { Song, Artist, Album } from "@/types";
 import { songSchema, SongFormData } from "@/lib/schemas";
 import { useSongs } from "@/lib/hooks/useSongs";
 import { apiRequest } from "@/lib/api";
+import { ImagePlus, X } from "lucide-react";
 
 interface SongFormProps {
   songId?: number;
@@ -33,35 +34,68 @@ interface SongFormProps {
 
 export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   const [artists, setArtists] = useState<Artist[]>([]);
-  const { songs, isLoading, error, createSong, updateSong } = useSongs();
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [selectedAlbumIds, setSelectedAlbumIds] = useState<number[]>([]);
+
+  const { createSong, updateSong } = useSongs();
+  const [image, setImage] = useState<File | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImage(e.target.files![0]);
+  };
 
   const form = useForm<SongFormData>({
     resolver: zodResolver(songSchema),
     defaultValues: {
       title: initialData?.title || "",
       artist_id: initialData?.artist_id || 0,
-      album_name: initialData?.album_name || "",
+      albums: initialData?.albums?.toString() || undefined,
       genre: initialData?.genre || "",
-      song_cover: initialData?.song_cover || "",
+      song_cover: undefined,
     },
   });
 
-  const getArtists = async () => {
-    try {
-      const response = await apiRequest.get("/artist/");
-      setArtists(response.data?.data.artists);
-    } catch (error) {
-      console.error("Failed to fetch artists:", error);
-    }
-  };
-
   useEffect(() => {
+    const getArtists = async () => {
+      try {
+        const res = await apiRequest.get("/artist/");
+        setArtists(res.data?.data.artists);
+      } catch (err) {
+        console.error("Failed to fetch artists:", err);
+      }
+    };
+
+    const getAlbums = async () => {
+      try {
+        const res = await apiRequest.get("/album/?limit=100");
+        setAlbums(res.data?.data.albums);
+      } catch (err) {
+        console.error("Failed to fetch albums:", err);
+      }
+    };
+
     getArtists();
+    getAlbums();
   }, []);
+
+  const toggleAlbum = (albumId: number) => {
+    setSelectedAlbumIds((prev) =>
+      prev.includes(albumId)
+        ? prev.filter((id) => id !== albumId)
+        : [...prev, albumId]
+    );
+  };
 
   const onSubmit = async (data: SongFormData) => {
     try {
+      if (image) {
+        data.song_cover = image;
+      }
+      data.albums = JSON.stringify(selectedAlbumIds);
+      console.log("albums", data.albums);
       if (songId) {
+        delete data.albums;
         await updateSong({ id: songId, data });
       } else {
         await createSong(data);
@@ -69,38 +103,9 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
       onSuccess();
     } catch (error: any) {
       console.error("Failed to save song:", error);
-
-      if (error.response) {
-        const details = error.response.data?.detail;
-
-        form.setError("root", {
-          message:
-            error.response.data?.message ||
-            "Failed to save song. Please try again.",
-        });
-
-        if (details && typeof details === "object") {
-          Object.entries(details).forEach(([key, value]) => {
-            if (key in form.getValues()) {
-              form.setError(key as any, {
-                message: value as string,
-              });
-            } else {
-              form.setError("root", {
-                message: value as string,
-              });
-            }
-          });
-        } else {
-          form.setError("root", {
-            message: details || "Failed to save song. Please try again.",
-          });
-        }
-      } else {
-        form.setError("root", {
-          message: "Failed to save song. Please try again.",
-        });
-      }
+      form.setError("root", {
+        message: "Failed to save song. Please try again.",
+      });
     }
   };
 
@@ -119,6 +124,17 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
     "Alternative",
     "Indie",
   ];
+
+  useEffect(() => {
+    const filteredAlbums = albums.filter(
+      (album) => album.artist_id === form.watch("artist_id")
+    );
+    const filteredSelectedAlbumIds = selectedAlbumIds.filter((id) =>
+      filteredAlbums.some((album) => album.id === id)
+    );
+    setSelectedAlbumIds(filteredSelectedAlbumIds);
+    setAlbums(filteredAlbums);
+  }, [form.watch("artist_id")]);
 
   return (
     <Form {...form}>
@@ -143,93 +159,135 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="artist_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Artist</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                defaultValue={field.value.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an artist" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {artists.map((artist) => (
-                    <SelectItem key={artist.id} value={artist.id.toString()}>
-                      {artist.artist_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="artist_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Artist</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(parseInt(value))}
+                  defaultValue={field.value.toString()}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an artist" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.id.toString()}>
+                        {artist.artist_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="album_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Album Name (Optional)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter album name or leave empty for single"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="genre"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Genre</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a genre" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {genres.map((genre) => (
+                      <SelectItem key={genre} value={genre}>
+                        {genre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        <FormField
-          control={form.control}
-          name="genre"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Genre</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a genre" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {genres.map((genre) => (
-                    <SelectItem key={genre} value={genre}>
-                      {genre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div>
+          <FormLabel>Add to Albums</FormLabel>
+          <div className="flex overflow-x-auto gap-2 py-2 no-scrollbar">
+            {albums.map((album) => {
+              const isSelected = selectedAlbumIds.includes(album.id);
+              return (
+                <div
+                  key={album.id}
+                  className={`flex items-center gap-2 px-2 py-1 rounded-full border text-sm whitespace-nowrap cursor-pointer transition-colors ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-gray-300 bg-white hover:bg-gray-50"
+                  }`}
+                  onClick={() => toggleAlbum(album.id)}
+                >
+                  <span className="truncate max-w-[120px]">
+                    {album.album_name}
+                  </span>
 
-        <FormField
-          control={form.control}
-          name="song_cover"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Song Cover URL</FormLabel>
-              <FormControl>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/cover.jpg"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+                  {isSelected && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAlbum(album.id);
+                      }}
+                      className="rounded-full p-0.5 hover:bg-blue-100"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          ref={imageInputRef}
+          className="hidden"
+          onChange={handleImageChange}
         />
+        {image && (
+          <div className="relative w-24 h-24">
+            <img
+              src={URL.createObjectURL(image)}
+              alt=""
+              className="w-full h-full object-cover rounded border"
+            />
+            <button
+              type="button"
+              onClick={() => setImage(null)}
+              className="absolute -top-2 -right-2 bg-red-500 bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-80"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          onClick={(e) => {
+            e.preventDefault();
+            imageInputRef.current?.click();
+          }}
+        >
+          <ImagePlus size={15} className="mr-1" />
+          Add Image
+        </Button>
 
         <Button
           type="submit"
