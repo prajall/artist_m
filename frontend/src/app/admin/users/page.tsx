@@ -2,8 +2,8 @@
 
 import Pagination from "@/components/Pagination";
 import { useUsers } from "@/lib/hooks/useUsers";
-import { Edit, Eye, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Edit, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { UserForm } from "../../../components/forms/UserForm";
 import { Button } from "../../../components/ui/button";
 import {
@@ -28,23 +28,35 @@ import {
   TableRow,
 } from "../../../components/ui/table";
 import { RoleBadge } from "./utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthProvider";
+import { hasAccess } from "@/lib/actions/permission";
 
 const SERVER_BASE_URL = process.env.SERVER_BASE_URL || "http://localhost:8000";
 
 export default function UsersPage() {
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
   const { users, totalUsers, error, isLoading, deleteUser } = useUsers();
+  const router = useRouter();
 
-  console.log("Users data:", useUsers());
+  if (!user) return <div>Loading...</div>;
 
-  // const canCreate = hasAccess(currentUser.role, "users", "create");
-  // const canUpdate = hasAccess(currentUser.role, "users", "update");
-  // const canDelete = hasAccess(currentUser.role, "users", "delete");
-  const canCreate = true;
-  const canUpdate = true;
-  const canDelete = true;
+  const canCreate = hasAccess(user, "user", "create");
+  const canUpdate = hasAccess(user, "user", "update");
+  const canDelete = hasAccess(user, "user", "delete");
+  const canView = hasAccess(user, "user", "view");
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this user?")) {
@@ -84,6 +96,25 @@ export default function UsersPage() {
             </DialogContent>
           </Dialog>
         )}
+      </div>
+      <div className="flex items-center justify-between">
+        <form
+          className="flex items-center gap-2 w-full"
+          onSubmit={(e) => {
+            e.preventDefault();
+            router.push(`/admin/users?search=${search}`);
+          }}
+        >
+          <Input
+            placeholder="Search"
+            onChange={(e) => setSearch(e.target.value)}
+            value={search}
+            className="w-full"
+          />
+          <Button type="submit" variant="outline" className="rounded-md">
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
       </div>
 
       <Table>

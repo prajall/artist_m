@@ -312,7 +312,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
                   onClick={() => toggleAlbum(album.id)}
                 >
                   <span className="truncate max-w-[120px]">
-                    {album.id} {album.album_name}
+                    {album.album_name}
                   </span>
 
                   {isSelected && (

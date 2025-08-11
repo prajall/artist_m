@@ -8,9 +8,12 @@ import { apiRequest } from "../api";
 
 const fetchUsers = async (
   page: number,
-  limit: number
+  limit: number,
+  search: string
 ): Promise<PaginatedResponse<User>> => {
-  const response = await apiRequest.get(`/user/?limit=${limit}&page=${page}`);
+  const response = await apiRequest.get(
+    `/user/?limit=${limit}&page=${page}${search ? `&search=${search}` : ""}`
+  );
   const data = await response.data?.data;
   console.log("Fetched users:", data);
   return {
@@ -75,12 +78,13 @@ export const useUsers = () => {
   const searchParams = useSearchParams();
   const page = parseInt(searchParams.get("page") || "1");
   const limit = 12;
+  const search = searchParams.get("search") || "";
 
   const { data, error, isFetching, isPending } = useQuery<
     PaginatedResponse<User>
   >({
-    queryKey: ["users", page, limit],
-    queryFn: () => fetchUsers(page, limit),
+    queryKey: ["users", page, limit, search],
+    queryFn: () => fetchUsers(page, limit, search),
     staleTime: 10 * 1000,
   });
 

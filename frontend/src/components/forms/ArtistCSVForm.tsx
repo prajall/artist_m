@@ -35,7 +35,6 @@ const ArtistCSVForm: React.FC = () => {
       if (res.data.errors && Array.isArray(res.data.errors)) {
         setErrors(res.data.errors);
       } else {
-        alert("CSV uploaded successfully!");
         setFile(null);
       }
     } catch (error: any) {

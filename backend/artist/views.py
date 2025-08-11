@@ -123,15 +123,16 @@ class ArtistCSVUploadView(APIView):
             return api_error(status.HTTP_400_BAD_REQUEST,"Only CSV files are supported.")
 
         try:
-            if request.user.role == 'artist_manager':
-                manager_id = request.user.id
-                uploaded_artists = manager_upload_artists(file,manager_id)
-                return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
-            elif request.user.role == 'super_admin':
-                uploaded_artists = s_admin_upload_artists(file)
-                return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
-            else:
-                return api_error(status.HTTP_403_FORBIDDEN, "You are not authorized to upload artists.")
+            with transaction.atomic():
+                if request.user.role == 'artist_manager':
+                    manager_id = request.user.id
+                    uploaded_artists = manager_upload_artists(file,manager_id)
+                    return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
+                elif request.user.role == 'super_admin':
+                    uploaded_artists = s_admin_upload_artists(file)
+                    return api_response(status.HTTP_201_CREATED, "Artists uploaded successfully", uploaded_artists)
+                else:
+                    return api_error(status.HTTP_403_FORBIDDEN, "You are not authorized to upload artists.")
         except ValueError as e:
             return api_error(status.HTTP_400_BAD_REQUEST, "CSV validation failed", str(e))
 
@@ -139,3 +140,9 @@ class ArtistCSVUploadView(APIView):
             print("Error uploading artists", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
        
+class ArtistExportView(APIView):
+    permission_classes = [IsAuthenticated, IsSuperAdminOrManager]
+
+    def get(self, request):
+        artists = fetch_all_dict("artist/fetch_artists.sql", {"manager_id": request.user.id})
+        return api_response(status.HTTP_200_OK, "Artists fetched successfully", artists)

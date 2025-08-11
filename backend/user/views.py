@@ -14,6 +14,8 @@ from django.db import transaction
 from artist.serializers import ArtistSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 # Create your views here.
 class UserListCreateView(APIView):
@@ -25,28 +27,28 @@ class UserListCreateView(APIView):
         data = request.data.copy()
 
         print("Data", data)
-        try:
-            with transaction.atomic():
-                serializer = UserSerializer(data=data)
+        with transaction.atomic():
+            serializer = UserSerializer(data=data)
 
-                if not serializer.is_valid():
-                    return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
+            if not serializer.is_valid():
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",serializer.errors)
 
-                user = serializer.save()
-                print("\n\n\nUser", user)
-                if data.get('artist_name'):
-                    data['user_id'] = user['id']
-                    artist_serializer = ArtistSerializer(data=data, context={"user": request.user, "bypass_role_check":True})
-                    if not artist_serializer.is_valid():
-                        return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",artist_serializer.errors)
-                    artist_serializer.save()
-                    
-                del user['password'] 
-                return api_response(status.HTTP_201_CREATED, "User created successfully", user)
+            user = serializer.save()
+            print("\n\n\nUser", user)
+            if data.get('artist_name'):
+                data['user_id'] = user['id']
+                artist_serializer = ArtistSerializer(data=data, context={"user": request.user, "bypass_role_check":True})
+                if not artist_serializer.is_valid():
+                    return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details",artist_serializer.errors)
+                artist_serializer.save()
+                
+            del user['password'] 
+            return api_response(status.HTTP_201_CREATED, "User created successfully", user)
+        # try:
             
-        except Exception as e:
-            print("Error creating user",e)
-            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal Server Error")
+        # except Exception as e:
+        #     print("Error creating user",e)
+        #     return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal Server Error")
             
     def get(self, request):
         print("Authenticated user",request.user)
@@ -69,7 +71,7 @@ class UserListCreateView(APIView):
             'offset': (page - 1) * limit
         }
         users = fetch_many_dict(path="user/fetch_users.sql",params=params, limit=limit, page=page)
-        total_users = fetch_one("user/user_count.sql")
+        total_users = fetch_one("user/user_count.sql",params)
 
         return api_response(status.HTTP_200_OK, "User fetched successfully", {"total_users": total_users['count'],"users": users})
 
@@ -97,8 +99,8 @@ class UserDetailView(APIView):
         print("\n\n\n\nrequest data", request.data)
         print("User_id",user_id)
         try:
-
             user = self.get_user(user_id)
+            self.check_object_permissions(request,user)
             print("User", user)
             serializer = UserSerializer( data=data , instance=user , partial=True)
 
@@ -161,15 +163,6 @@ class LoginView(APIView):
 class RefreshView(APIView):
     authentication_classes = []
     def post(self, request):
-        print("=== REQUEST DEBUG ===")
-        print("\nHeaders:", dict(request.headers))
-        print("\nCookies:", request.COOKIES)
-        print("\nMethod:", request.method)
-        print("\nContent-Type:", request.content_type)
-        print("\nOrigin:", request.headers.get('Origin'))
-        print("\nUser-Agent:", request.headers.get('User-Agent'))
-        print("\nCookie Header:", request.headers.get('Cookie'))
-        print("==================")
         data = {}
         data["refresh"] = request.COOKIES.get("refresh_token") # interceptor sends in cookies
         if not data["refresh"]:
@@ -192,8 +185,7 @@ class RefreshView(APIView):
         )
         return res
 
-       
-    
+          
 class UserInfo(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -205,3 +197,22 @@ class UserInfo(APIView):
                 "role": request.user.role,
             }
         return api_response(status.HTTP_200_OK, "User info fetched successfully", user)
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh_token")
+        print("Refresh token", refresh_token)
+        if not refresh_token:
+            return Response({"detail": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
+            response.delete_cookie("access_token")
+            response.delete_cookie("refresh_token")
+            return response
+        except TokenError:
+            return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
+

@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthProvider";
+import { apiRequest } from "@/lib/api";
 import { User as AuthUserProps } from "@/types";
 import { LogOut, ShieldUser, ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
@@ -19,11 +20,11 @@ const UserIcon = () => {
   const router = useRouter();
 
   const logoutHandler = async () => {
-    // const response = await logoutUser();
-    // if (response.success) {
-    //   setUser(null);
-    //   router.push("/");
-    // }
+    const response = await apiRequest.post("/user/logout/");
+    if (response.status === 205) {
+      setUser(null);
+      router.push("/login");
+    }
   };
 
   if (!user) {
@@ -58,20 +59,6 @@ const UserIcon = () => {
           <DropdownMenuItem className="cursor-pointer">
             <User className="text-neutral-950" /> Profile
           </DropdownMenuItem>
-          {/* {user.role == "admin" && (
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href={"/admin"} className="">
-                <ShieldUser className="text-neutral-950" /> Admin
-              </Link>
-            </DropdownMenuItem>
-          )}
-          {user.role == "customer" && (
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href={"/my-orders"} className="">
-                <ShoppingBag className="text-neutral-950" /> My Orders
-              </Link>
-            </DropdownMenuItem>
-          )} */}
 
           <DropdownMenuItem className="cursor-pointer">
             <button

@@ -31,6 +31,8 @@ import {
 import { useSongs } from "@/lib/hooks/useSongs";
 import { PaginationContent } from "@/components/ui/pagination";
 import CustomPagination from "@/components/Pagination";
+import { hasAccess } from "@/lib/actions/permission";
+import { useAuth } from "@/contexts/AuthProvider";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
@@ -38,15 +40,16 @@ console.log(SERVER_BASE_URL);
 export default function SongsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { songs, isLoading, error, deleteSong, totalSongs } = useSongs();
 
-  // const canCreate = hasAccess(currentUser.role, "songs", "create");
-  // const canUpdate = hasAccess(currentUser.role, "songs", "update");
-  // const canDelete = hasAccess(currentUser.role, "songs", "delete");
+  const { user } = useAuth();
 
-  const canCreate = true;
-  const canUpdate = true;
-  const canDelete = true;
+  if (!user) return <div>Loading...</div>;
+  const canCreate = hasAccess(user, "song", "create");
+  const canUpdate = hasAccess(user, "song", "update");
+  const canDelete = hasAccess(user, "song", "delete");
+  const canView = hasAccess(user, "song", "view");
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this song?")) {
@@ -134,7 +137,7 @@ export default function SongsPage() {
                   </Button>
 
                   {canUpdate && (
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />

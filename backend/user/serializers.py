@@ -113,18 +113,18 @@ class UserSerializer(BaseUserSerializer):
 
     def create(self, validated_data):
         
-        print("profile image",validated_data['profile_image'])
+        print("profile image",validated_data.get('profile_image'))
         params = [
-            validated_data['email'],
-            validated_data['password'],
-            validated_data['first_name'],
-            validated_data['last_name'],
-            validated_data['role'],
-            validated_data['phone'],
-            validated_data['gender'],
-            validated_data['address'],
-            validated_data['dob'],
-            validated_data['profile_image']
+            validated_data.get('email'),
+            validated_data.get('password'),
+            validated_data.get('first_name'),
+            validated_data.get('last_name'),
+            validated_data.get('role'),
+            validated_data.get('phone'),
+            validated_data.get('gender'),
+            validated_data.get('address'),
+            validated_data.get('dob'),
+            validated_data.get('profile_image')
         ]
 
         new_user = execute_sql(path="user/insert_user.sql",params=params, fetch_one=True)

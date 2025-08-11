@@ -37,6 +37,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { hasAccess } from "@/lib/actions/permission";
+import { useAuth } from "@/contexts/AuthProvider";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
@@ -46,13 +48,13 @@ export default function AlbumsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { albums, isLoading, error, deleteAlbum, totalAlbums } = useAlbums();
+  const { user } = useAuth();
 
-  // const canCreate = hasAccess(currentUser.role, "albums", "create");
-  // const canUpdate = hasAccess(currentUser.role, "albums", "update");
-  // const canDelete = hasAccess(currentUser.role, "albums", "delete");
-  const canCreate = true;
-  const canUpdate = true;
-  const canDelete = true;
+  if (!user) return <div>Loading...</div>;
+  const canCreate = hasAccess(user, "album", "create");
+  const canUpdate = hasAccess(user, "album", "update");
+  const canDelete = hasAccess(user, "album", "delete");
+  const canView = hasAccess(user, "album", "view");
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this album?")) {

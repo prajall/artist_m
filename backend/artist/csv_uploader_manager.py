@@ -24,7 +24,8 @@ def manager_upload_artists(file, manager_id):
     # check invalid headers
 
     text_io.seek(0)
-    reader = csv.DictReader(text_io)
+    reader = csv.DictReader(text_io,skipinitialspace=True)
+    reader.fieldnames = [h.strip() for h in reader.fieldnames]
     artist_datas = list(reader)
 
     errors = []
@@ -37,7 +38,7 @@ def manager_upload_artists(file, manager_id):
 
     for artist in valid_artists:
         
-        query_values.append(f"('{artist['user_id']}', '{artist['artist_name']}', '{artist['first_release_year']}-01-01','{manager_id}', NOW(), NOW())")
+        query_values.append(f"('{artist['user_id']}', '{artist['artist_name']}', '{artist['first_release_year']}','{manager_id}', NOW(), NOW())")
         
     
     query = f"""
@@ -45,8 +46,10 @@ def manager_upload_artists(file, manager_id):
         VALUES {",".join(query_values)}
         RETURNING *
         """
+    result = execute_sql(query=query,fetch_all_dict=True)
 
-    result = execute_sql(query=query)
+    for artist in result:
+        execute_sql("artist/set_role_to_artist.sql", [artist['user_id']])
     return result
 
 

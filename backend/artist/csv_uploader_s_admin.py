@@ -22,10 +22,12 @@ def s_admin_upload_artists(file):
     missing_headers = required_headers - set(headers)
 
     if missing_headers:
+        print("\n\n\n\n\n\n\nMissing headers",missing_headers)
         raise ValueError(f"Missing required headers: {', '.join(missing_headers)}")
 
     text_io.seek(0)
-    reader = csv.DictReader(text_io)
+    reader = csv.DictReader(text_io,skipinitialspace=True)
+    reader.fieldnames = [h.strip() for h in reader.fieldnames]
     artist_user_datas = list(reader)
     
 
@@ -59,7 +61,7 @@ def s_admin_upload_artists(file):
 
     query = f"""
     INSERT INTO Artists (user_id, artist_name, manager_id, first_release_year, created_at, updated_at)
-    VALUES {",".join([f"({artist['user_id']}, '{artist['artist_name']}', {artist['manager_id']}, '{artist['first_release_year']}-01-01', NOW(), NOW())" for artist in artists])}
+    VALUES {",".join([f"({artist['user_id']}, '{artist['artist_name']}', {artist['manager_id']}, '{artist['first_release_year']}', NOW(), NOW())" for artist in artists])}
     RETURNING *
     """
     
@@ -98,6 +100,7 @@ def bulk_data_validation(artist_user_datas):
         WHERE email = ANY(%s) AND role = 'artist_manager'
     """
     managers_result = fetch_all_dict(query=manager_query, params=[managers])
+    print("managers_result",managers_result)
     manager_email_to_user = {user['email']: user for user in managers_result}
     
     
@@ -109,12 +112,17 @@ def bulk_data_validation(artist_user_datas):
     
     for row_num, data in enumerate(artist_user_datas, start=2):
         print("manager_email=",data['manager_email'])
-        data['manager_id'] = manager_email_to_user.get(data['manager_email'])['id']
-        if not manager_email_to_user.get(data['manager_email']):
+        print("manager_email_to_user",manager_email_to_user)
+        manager_user = manager_email_to_user.get(data['manager_email'])
+        if not manager_user:
             errors.append(f"Row {row_num}: Artist Manager with email '{data['manager_email']}' does not exist.")
             continue
+        data['manager_id'] = manager_user['id']
+
 
         data['role'] = 'artist'
+
+        print("\n\n\n Base User data",data)
         
         serializer = BaseUserSerializer(data = data)
        

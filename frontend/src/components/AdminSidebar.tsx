@@ -1,6 +1,14 @@
 "use client";
 
-import { Users, Music, UserCheck, Disc, Album, LogOut } from "lucide-react";
+import {
+  Users,
+  Music,
+  UserCheck,
+  Disc,
+  Album,
+  LogOut,
+  User,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,37 +24,38 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthProvider";
+import { hasAccess } from "@/lib/actions/permission";
 
 const menuItems = [
+  {
+    title: "Profile",
+    url: "/admin",
+    icon: User,
+    resource: "profile",
+  },
   {
     title: "Users",
     url: "/admin/users",
     icon: Users,
-    resource: "users",
+    resource: "user",
   },
   {
     title: "Artists",
     url: "/admin/artists",
     icon: UserCheck,
-    resource: "artists",
-  },
-  {
-    title: "Managers",
-    url: "/admin/managers",
-    icon: Users,
-    resource: "managers",
+    resource: "artist",
   },
   {
     title: "Songs",
     url: "/admin/songs",
     icon: Music,
-    resource: "songs",
+    resource: "song",
   },
   {
     title: "Albums",
     url: "/admin/albums",
     icon: Album,
-    resource: "albums",
+    resource: "album",
   },
 ];
 
@@ -54,9 +63,9 @@ export function AdminSidebar() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // const filteredMenuItems = menuItems.filter((item) =>
-  //   hasAccess(currentUser.role, item.resource, "read")
-  // );
+  if (!user) return <div>Loading...</div>;
+  const filteredMenuItems =
+    menuItems.filter((item) => hasAccess(user, item.resource, "view")) || [];
 
   const handleLogout = async () => {
     router.push("/login");
@@ -74,7 +83,7 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title} className="group">
                   <SidebarMenuButton asChild>
                     <Link href={item.url} className=" ">
@@ -88,16 +97,6 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }

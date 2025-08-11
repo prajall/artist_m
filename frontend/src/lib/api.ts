@@ -33,7 +33,7 @@ apiRequest.interceptors.response.use(
   async (error) => {
     console.log("error from apiRequest", error);
     console.log("Document cookies", document.cookie);
-    if (error.response.status === 401) {
+    if (error.response?.status === 401) {
       const response = await axios.post(
         `${API_BASE_URL}/user/token/refresh/`,
         {},

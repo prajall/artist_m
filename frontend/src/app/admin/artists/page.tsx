@@ -22,6 +22,8 @@ import {
 } from "../../../components/ui/dialog";
 import ArtistPopover from "./ArtistDetail";
 import ArtistCSVForm from "@/components/forms/ArtistCSVForm";
+import { hasAccess } from "@/lib/actions/permission";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export default function ArtistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -29,12 +31,13 @@ export default function ArtistsPage() {
   const { artists, isLoading, error, totalArtists, deleteArtist } =
     useArtists();
 
-  const canCreate = true;
-  const canUpdate = true;
-  const canDelete = true;
-  // const canCreate = hasAccess(currentUser.role, "artists", "create");
-  // const canUpdate = hasAccess(currentUser.role, "artists", "update");
-  // const canDelete = hasAccess(currentUser.role, "artists", "delete");
+  const { user } = useAuth();
+
+  if (!user) return <div>Loading...</div>;
+  const canCreate = hasAccess(user, "album", "create");
+  const canUpdate = hasAccess(user, "album", "update");
+  const canDelete = hasAccess(user, "album", "delete");
+  const canView = hasAccess(user, "album", "view");
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">Error: {error.message}</div>;

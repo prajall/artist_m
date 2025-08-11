@@ -102,4 +102,4 @@ def execute_sql(path=None, params=None, query=None,fetch_one=False,fetch_all_dic
             return cursor.rowcount
     except Exception as e:
         print("Error executing query:", e)
-        return None
+        raise e
