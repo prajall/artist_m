@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { hasAccess } from "@/lib/actions/permission";
 import { useAuth } from "@/contexts/AuthProvider";
+import { AlbumDetail } from "./components/AlbumDetail";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
@@ -47,6 +48,8 @@ console.log(SERVER_BASE_URL);
 export default function AlbumsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [openAlbumId, setOpenAlbumId] = useState<number | null>(null);
   const { albums, isLoading, error, deleteAlbum, totalAlbums } = useAlbums();
   const { user } = useAuth();
 
@@ -145,12 +148,12 @@ export default function AlbumsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {}}>
+                    <DropdownMenuItem onClick={() => setOpenAlbumId(album.id)}>
                       <Eye className="mr-2 h-4 w-4" />
                       View Details
                     </DropdownMenuItem>
                     {canUpdate && (
-                      <Dialog>
+                      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                         <DialogTrigger asChild>
                           <DropdownMenuItem
                             onSelect={(e) => e.preventDefault()}
@@ -185,41 +188,17 @@ export default function AlbumsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {canUpdate && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Edit Album</DialogTitle>
-                          </DialogHeader>
-                          <AlbumForm
-                            albumId={album.id}
-                            initialData={album}
-                            onSuccess={() => {
-                              setIsCreateOpen(false);
-                            }}
-                          />
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(album.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div> */}
+              <Dialog
+                open={openAlbumId === album.id}
+                onOpenChange={(isOpen) => !isOpen && setOpenAlbumId(null)}
+              >
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Album Details</DialogTitle>
+                  </DialogHeader>
+                  <AlbumDetail album={album} />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         ))}

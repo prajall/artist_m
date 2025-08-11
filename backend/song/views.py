@@ -94,6 +94,8 @@ class SongListCreateView(APIView):
                     "page":page
                 }
                 songs = fetch_many_dict(path="song/fetch_songs.sql",params=params )
+                total_songs = fetch_one(path="song/get_total_songs.sql",params=params)
+
 
             if user_role == 'super_admin':
                 params={
@@ -141,13 +143,20 @@ class SongDetailView(APIView):
     
     def patch(self, request, song_id):
         try:
+            data = request.data.copy()
+            if request.user.role == 'artist':
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+                data['artist_id'] = artist['id'] if artist else None
+            else:
+                artist = fetch_one("artist/get_artist_by_id.sql", {"id": data['artist_id']})
+                data['artist_id'] = artist['id'] if artist else None
             song = self.get_object(song_id)
             if not song:
                 return api_error(status.HTTP_404_NOT_FOUND,"Song not found")
 
             self.check_object_permissions(request, song)
 
-            serializer = SongSerializer(data=request.data, instance = song,context={"user_id": request.user.id} ,partial=True)
+            serializer = SongSerializer(data=data, instance = song,context={"user_id": request.user.id, "artist_id": data['artist_id']} ,partial=True)
 
             print("hdfhdhfdh")
 

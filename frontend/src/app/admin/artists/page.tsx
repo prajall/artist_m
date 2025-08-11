@@ -8,7 +8,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useArtists } from "@/lib/hooks/useArtists";
-import { Edit, Eye, Import, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import {
+  Download,
+  Edit,
+  Eye,
+  Import,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useState } from "react";
 import { ArtistForm } from "../../../components/forms/ArtistForm";
 import { Button } from "../../../components/ui/button";
@@ -24,6 +33,7 @@ import ArtistPopover from "./ArtistDetail";
 import ArtistCSVForm from "@/components/forms/ArtistCSVForm";
 import { hasAccess } from "@/lib/actions/permission";
 import { useAuth } from "@/contexts/AuthProvider";
+import { apiRequest } from "@/lib/api";
 
 export default function ArtistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -43,16 +53,41 @@ export default function ArtistsPage() {
   if (error) return <div className="text-red-500">Error: {error.message}</div>;
   if (!artists) return <div>No data</div>;
 
+  const handleDownload = async () => {
+    try {
+      const response = await apiRequest.get("/artist/export/", {
+        responseType: "blob",
+      });
+      const blob = response.data;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "artists_export.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Failed to download artists CSV.");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Artists</h1>
         {canCreate && (
           <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
             <Dialog open={isCSVOpen} onOpenChange={setIsCSVOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
-                  <Import className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4 mr-2" />
                   Import CSV
                 </Button>
               </DialogTrigger>

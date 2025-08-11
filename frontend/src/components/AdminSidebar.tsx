@@ -29,7 +29,7 @@ import { hasAccess } from "@/lib/actions/permission";
 const menuItems = [
   {
     title: "Profile",
-    url: "/admin",
+    url: "/admin/profile",
     icon: User,
     resource: "profile",
   },
@@ -65,11 +65,10 @@ export function AdminSidebar() {
 
   if (!user) return <div>Loading...</div>;
   const filteredMenuItems =
-    menuItems.filter((item) => hasAccess(user, item.resource, "view")) || [];
-
-  const handleLogout = async () => {
-    router.push("/login");
-  };
+    menuItems.filter(
+      (item) =>
+        hasAccess(user, item.resource, "view") || item.url === "/admin/profile"
+    ) || [];
 
   return (
     <Sidebar>

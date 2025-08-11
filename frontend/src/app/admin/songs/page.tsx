@@ -33,14 +33,18 @@ import { PaginationContent } from "@/components/ui/pagination";
 import CustomPagination from "@/components/Pagination";
 import { hasAccess } from "@/lib/actions/permission";
 import { useAuth } from "@/contexts/AuthProvider";
+import { SongDetail } from "./components/SongDetail";
 
-const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
+const SERVER_BASE_URL =
+  process.env.NEXT_PUBLIC_SERVER_BASE_URL || "http://localhost:8000";
 
 console.log(SERVER_BASE_URL);
 export default function SongsPage() {
   const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [openSongId, setOpenSongId] = useState<number | null>(null);
+
   const { songs, isLoading, error, deleteSong, totalSongs } = useSongs();
 
   const { user } = useAuth();
@@ -104,17 +108,23 @@ export default function SongsPage() {
           {songs.map((song) => (
             <TableRow key={song.id}>
               <TableCell className="flex items-center gap-2 py-4">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 rounded-sm">
                   {song.song_cover && (
                     <>
                       <AvatarImage
-                        src={SERVER_BASE_URL || "" + song.song_cover}
+                        src={SERVER_BASE_URL + song.song_cover}
                         alt={song.title}
+                        className="object-cover "
                       />
                       <AvatarFallback>
                         <Play className="h-4 w-4" />
                       </AvatarFallback>
                     </>
+                  )}
+                  {!song.song_cover && (
+                    <AvatarFallback>
+                      <Play className="h-4 w-4" />
+                    </AvatarFallback>
                   )}
                 </Avatar>
                 <div>
@@ -132,10 +142,25 @@ export default function SongsPage() {
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setOpenSongId(song.id)}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
 
+                  <Dialog
+                    open={openSongId === song.id}
+                    onOpenChange={(isOpen) => !isOpen && setOpenSongId(null)}
+                  >
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Song Details</DialogTitle>
+                      </DialogHeader>
+                      <SongDetail song={song} />
+                    </DialogContent>
+                  </Dialog>
                   {canUpdate && (
                     <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                       <DialogTrigger asChild>

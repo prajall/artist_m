@@ -17,6 +17,7 @@ export interface User {
   address?: string;
   dob?: string;
   profile_image?: string;
+  created_at: string;
 
   // artist_name?: string;
   // first_release_year?: number;

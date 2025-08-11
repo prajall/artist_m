@@ -11,7 +11,8 @@ from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
 from django.db import transaction
-
+from django.http import HttpResponse
+import csv
 
 # Create your views here.
 class ArtistListCreateView(APIView):
@@ -144,5 +145,26 @@ class ArtistExportView(APIView):
     permission_classes = [IsAuthenticated, IsSuperAdminOrManager]
 
     def get(self, request):
-        artists = fetch_all_dict("artist/fetch_artists.sql", {"manager_id": request.user.id})
-        return api_response(status.HTTP_200_OK, "Artists fetched successfully", artists)
+        try:
+            if request.user.role=='artist_manager':
+                manager_id = request.user.id
+            artists = fetch_all_dict(path="artist/export_artist.sql", params={"manager_id": manager_id})
+            # create a csv file and download it
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="artists_export.csv"'
+
+            writer = csv.writer(response)
+            
+            if artists:
+                header = artists[0].keys()
+                writer.writerow(header)
+
+                for artist in artists:
+                    writer.writerow(artist.values())
+            else:
+                writer.writerow(['No data available'])
+
+            return response
+        except Exception as e:
+            print("Error exporting artists", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

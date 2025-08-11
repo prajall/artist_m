@@ -72,6 +72,7 @@ export const UserSearch = ({
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const searchUsersDebounced = async () => {
@@ -107,6 +108,12 @@ export const UserSearch = ({
     }
   }, [value, users]);
 
+  useEffect(() => {
+    if (role === "artist_manager" && user?.role === "artist_manager") {
+      setSelectedUser(user);
+    }
+  }, [user, role]);
+
   const handleSelect = (user: User) => {
     setSelectedUser(user);
     onChange(user.id);
@@ -123,6 +130,9 @@ export const UserSearch = ({
             // role="combobox"
             // aria-expanded={open}
             className="flex-1  justify-between"
+            disabled={
+              role === "artist_manager" && user?.role === "artist_manager"
+            }
           >
             {selectedUser ? (
               <span className="truncate">
@@ -294,7 +304,7 @@ export function ArtistForm({
                     role="user"
                     value={field.value || undefined}
                     onChange={(userId) => field.onChange(userId || 0)}
-                    placeholder="Search and select user..."
+                    placeholder="Select user..."
                     label="User"
                   />
                 </FormControl>
@@ -315,7 +325,7 @@ export function ArtistForm({
                   role="artist_manager"
                   value={field.value}
                   onChange={field.onChange}
-                  placeholder="Search and select manager..."
+                  placeholder="Select manager..."
                   label="Manager"
                 />
               </FormControl>

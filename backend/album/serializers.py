@@ -138,7 +138,11 @@ class ValidatedAlbumSerializer(AlbumSongSerializer):
             raise serializers.ValidationError(f"Invalid album ID: {value}")
 
         
-        if album['artist_id'] != artist_id or self.context.get('user').role != "super_admin" and album['manager_id'] != self.context.get('user').id:
+        # if album['artist_id'] != artist_id:
+        #     raise serializers.ValidationError("Album does not belong to the artist.")
+        
+        # print("\n\nAlbum",album, self.context.get('user').role)
+        if album['artist_id'] != artist_id and self.context.get('user').role != "super_admin" and album['manager_id'] != self.context.get('user').id:
             raise serializers.ValidationError("You do not have permission to modify this album.")
 
         return value

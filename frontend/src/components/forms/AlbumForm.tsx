@@ -25,6 +25,7 @@ import { albumSchema, AlbumFormData } from "@/lib/schemas";
 import { useArtists } from "@/lib/hooks/useArtists";
 import { useAlbums } from "@/lib/hooks/useAlbums";
 import { ImagePlus, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface AlbumFormProps {
   albumId?: number;
@@ -35,7 +36,7 @@ interface AlbumFormProps {
 export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
   const { albums, isLoading, error, createAlbum, updateAlbum } = useAlbums();
   const { artists } = useArtists();
-
+  const { user } = useAuth();
   const [image, setImage] = useState<File | null>(null);
 
   if (isLoading) return <div>Loading...</div>;
@@ -45,7 +46,7 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
     resolver: zodResolver(albumSchema),
     defaultValues: {
       album_name: initialData?.album_name || "",
-      artist_id: initialData?.artist_id || 0,
+      artist_id: initialData?.artist_id || undefined,
       album_cover: undefined,
     },
   });
@@ -58,6 +59,9 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
 
   const onSubmit = async (data: AlbumFormData) => {
     try {
+      if (image) {
+        data.album_cover = image;
+      }
       if (albumId) {
         await updateAlbum({ id: albumId, data });
       } else {
@@ -101,6 +105,12 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
     }
   };
 
+  useEffect(() => {
+    if (user?.role === "artist") {
+      form.setValue("artist_id", user?.id);
+    }
+  }, [user]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -124,33 +134,35 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="artist_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Artist</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                defaultValue={field.value.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an artist" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {artists.map((artist) => (
-                    <SelectItem key={artist.id} value={artist.id.toString()}>
-                      {artist.artist_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {user?.role !== "artist" && (
+          <FormField
+            control={form.control}
+            name="artist_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Artist</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(parseInt(value))}
+                  defaultValue={field.value?.toString()}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an artist" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.id.toString()}>
+                        {artist.artist_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <input
           type="file"

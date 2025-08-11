@@ -7,6 +7,7 @@ SELECT
     phone,
     gender,
     address,
-    dob
+    dob,
+    profile_image
 FROM Users
 WHERE id = %s

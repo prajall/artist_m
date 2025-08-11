@@ -25,6 +25,7 @@ import { songSchema, SongFormData } from "@/lib/schemas";
 import { useSongs } from "@/lib/hooks/useSongs";
 import { apiRequest } from "@/lib/api";
 import { ImagePlus, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface SongFormProps {
   songId?: number;
@@ -43,8 +44,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   const { getSongById } = useSongs();
   const { data: song }: { data: any } = getSongById(songId || 0);
   const imageInputRef = useRef<HTMLInputElement>(null);
-
-  console.log("getSong", song?.data);
+  const { user } = useAuth();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImage(e.target.files![0]);
@@ -54,8 +54,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
     resolver: zodResolver(songSchema),
     defaultValues: {
       title: initialData?.title || "",
-      artist_id: initialData?.artist_id || 0,
-      // albums: initialData?.albums?.toString() || undefined,
+      artist_id: initialData?.artist_id || 1,
       genre: initialData?.genre || "",
       song_cover: undefined,
     },
@@ -63,6 +62,9 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
 
   useEffect(() => {
     const getArtists = async () => {
+      if (user?.role === "artist") {
+        return;
+      }
       try {
         const res = await apiRequest.get("/artist/");
         setArtists(res.data?.data.artists);
@@ -188,9 +190,14 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   ];
 
   useEffect(() => {
+    if (user?.role === "artist") {
+      form.setValue("artist_id", 1);
+    }
+  }, [user]);
+
+  useEffect(() => {
     console.log("albums", albums);
     console.log("Artist", form.watch("artist_id"));
-    // console.log("filtered", filtered);
     const filtered = albums.filter(
       (album) => album.artist_id === form.watch("artist_id")
     );
@@ -198,7 +205,12 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
       filtered.some((album) => album.id === id)
     );
     setSelectedAlbumIds(filteredSelectedAlbumIds);
-    setFilteredAlbums(filtered);
+    if (user?.role === "artist") {
+      setFilteredAlbums(albums);
+    } else {
+      setFilteredAlbums(filtered);
+    }
+    console.log("filtered albums", filtered);
   }, [albums, form.watch("artist_id")]);
 
   useEffect(() => {
@@ -206,9 +218,10 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
 
     if (songId && song) {
       console.log("albums in song", song.data?.albums);
+      const albums = song.data?.albums.map((album: any) => album.id);
       setSelectedAlbumIds(song.data?.albums || []);
     }
-  }, [song]);
+  }, [albums, song]);
 
   useEffect(() => {
     console.log("selectedAlbumIds", selectedAlbumIds);
@@ -238,34 +251,39 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="artist_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Artist</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
-                  disabled={!!songId}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an artist" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {artists.map((artist) => (
-                      <SelectItem key={artist.id} value={artist.id.toString()}>
-                        {artist.artist_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {user?.role !== "artist" && (
+            <FormField
+              control={form.control}
+              name="artist_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Artist</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value?.toString()}
+                    disabled={!!songId}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select an artist" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {artists.map((artist) => (
+                        <SelectItem
+                          key={artist.id}
+                          value={artist.id.toString()}
+                        >
+                          {artist.artist_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}
@@ -278,7 +296,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a genre" />
                     </SelectTrigger>
                   </FormControl>

@@ -1,3 +1,3 @@
 SELECT id,first_name, last_name ,email,role, password 
 from users 
-WHERE email = %s
+WHERE email = %s and role not in ('user')

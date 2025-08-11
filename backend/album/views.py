@@ -28,17 +28,12 @@ class AlbumListCreateView(APIView):
 
         try:
             if request.user.role == 'artist':
-                artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+                data['artist_id'] = artist['id'] if artist else None
             else:
                 artist = fetch_one("artist/get_artist_by_id.sql", {"id": data['artist_id']})
-            print("Artist", artist)
-            if not artist:
-                print("Artist not found")
-                raise serializers.ValidationError("No artist associated with this user.")
+                data['artist_id'] = artist['id'] if artist else None
 
-            if request.user.role == 'artist':
-                data['artist_id'] = artist['id']
-            
             serializer = AlbumSerializer(data=data, context={"user_id": request.user.id, "artist_id": artist['id']})
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
@@ -112,7 +107,7 @@ class AlbumListCreateView(APIView):
 class AlbumDetailView(APIView):
 
     parser_classes = (MultiPartParser, FormParser,)
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, album_id):
         try:
@@ -125,7 +120,6 @@ class AlbumDetailView(APIView):
             album = self.get_object(album_id)
             if not album:
                 return api_error(status.HTTP_404_NOT_FOUND,"Album not found")
-            self.check_object_permissions(request,album)  
             return api_response(status.HTTP_200_OK, "Album detail fetched successfully", album)
         except (PermissionDenied, NotAuthenticated) as e:
            return api_error(status.HTTP_403_FORBIDDEN, str(e))
@@ -135,6 +129,14 @@ class AlbumDetailView(APIView):
     
     def patch(self, request, album_id):
         try:
+            data = request.data.copy()
+            if request.user.role == 'artist':
+                artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
+                data['artist_id'] = artist['id'] if artist else None
+            else:
+                artist = fetch_one("artist/get_artist_by_id.sql", {"id": data['artist_id']})
+                data['artist_id'] = artist['id'] if artist else None
+
             album = self.get_object(album_id)
             if not album:
                 return api_error(status.HTTP_404_NOT_FOUND,"Album not found")
@@ -215,62 +217,29 @@ class AlbumSongView(APIView):
         except Exception as e:
             print("Error deleting album song", e)
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
-    
-            # # Upload songs
-            
-            # songs_data = data.get('songs', [])
 
-            # if isinstance(songs_data, str):
-            #     try:
-            #         songs_data = json.loads(songs_data)
-            #     except json.JSONDecodeError:
-            #         return api_error(
-            #             status.HTTP_400_BAD_REQUEST,
-            #             "Invalid JSON string for 'songs'",
-            #         )
+class AlbumSongsView(APIView):
+    permission_classes = [IsAuthenticated, IsArtistOrManager]
 
-            # if not isinstance(songs_data, list):
-            #     return api_error(
-            #         status.HTTP_400_BAD_REQUEST,
-            #         "'songs' must be an array",
-            #         {"songs": ["Expected an array of songs."]}
-            #     )
+    def get(self, request, album_id):
+        try:
+            songs = fetch_many_dict(path="album/get_album_songs.sql", params={"album_id": album_id})
+            return api_response(status.HTTP_200_OK, "Album songs fetched successfully", songs)
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        except Exception as e:
+            print("Error fetching album songs", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
-            # print("\nSongs_data:", songs_data)
+class SongAlbumsView(APIView):
+    permission_classes = [IsAuthenticated, IsArtistOrManager]
 
-            # if songs_data:
-            #     new_songs = []
-                
-            #     for index, song_dict in enumerate(songs_data):
-            #         # Attach artist ID
-            #         song_dict['artist_id'] = artist['id']
-
-            #         # Attach song cover if present
-            #         song_cover_file = request.FILES.get(f'song_cover_{index}')
-            #         if song_cover_file:
-            #             song_dict['song_cover'] = song_cover_file
-
-            #         # Validate and save each song individually
-            #         song_serializer = SongSerializer(data=song_dict, context={"user_id": user_id})
-            #         if not song_serializer.is_valid():
-            #             return api_error(
-            #                 status.HTTP_400_BAD_REQUEST,
-            #                 f"Validation failed for song at index {index}",
-            #                 song_serializer.errors
-            #             )
-
-            #         new_song = song_serializer.save()
-            #         new_songs.append(new_song)
-                
-            # with transaction.atomic():
-                
-            #     if songs_data and len(songs_data) > 0:
-            #         new_songs = song_serializer.save()
-            #         song_ids = [song['id'] for song in new_songs]
-
-            #         # create song and album link
-            #         for song_id in song_ids:
-            #             execute_sql(
-            #                 path="album_song/insert_album_song.sql", 
-            #                 params={"album_id":album_id, "song_id":song_id}
-            #             )
+    def get(self, request, song_id):
+        try:
+            albums = fetch_many_dict(path="album/get_song_albums.sql", params={"song_id": song_id})
+            return api_response(status.HTTP_200_OK, "Song albums fetched successfully", albums)
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        except Exception as e:
+            print("Error fetching song albums", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

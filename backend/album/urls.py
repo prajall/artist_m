@@ -6,4 +6,6 @@ urlpatterns = [
     path("",AlbumListCreateView.as_view()),
     path("<int:album_id>/",AlbumDetailView.as_view()),
     path("album-song/",AlbumSongView.as_view()),
+    path("<int:album_id>/songs/",AlbumSongsView.as_view()),
+    path("songs/<int:song_id>/",SongAlbumsView.as_view()),
 ]
