@@ -27,19 +27,9 @@ export interface Artist {
   id: number;
   artist_name: string;
   first_release_year?: number;
-  profile_image?: string;
-  created_at: string;
-  manager_id?: number;
-  manager_first_name?: string;
-  manager_last_name?: string;
-  manager_email?: string;
+  manager_id: number;
   user_id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  gender?: string;
-  address?: string;
+  created_at: string;
 }
 
 export interface Song {

@@ -59,7 +59,7 @@ export default function AlbumsPage() {
       try {
         await deleteAlbum(id);
       } catch (error) {
-        console.error("Failed to delete album:", error);
+        console.log("Failed to delete album:", error);
       }
     }
   };

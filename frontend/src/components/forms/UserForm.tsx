@@ -75,7 +75,7 @@ export function UserForm({ userId, initialData, onSuccess }: UserFormProps) {
       }
       onSuccess();
     } catch (error: any) {
-      console.error("Failed to save user:", error);
+      console.log("Failed to save user:", error);
 
       if (error.response) {
         const details = error.response.data?.detail;

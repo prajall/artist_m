@@ -1,7 +1,6 @@
 from rest_framework.views import APIView
 from query.sql.utils import fetch_all_dict, fetch_one, execute_sql
 from .serializers import *
-from user.permissions import IsManagerOrReadOnly
 from app.utils import api_response, api_error
 from .csv_uploader_manager import manager_upload_artists
 from .csv_uploader_s_admin import s_admin_upload_artists

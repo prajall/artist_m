@@ -18,7 +18,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const response = await apiRequest.get("/user/info/");
       setUser(response.data.data);
     } catch (error) {
-      console.error("Failed to fetch user info:", error);
+      console.log("Failed to fetch user info:", error);
       setUser(null);
     }
   };

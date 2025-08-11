@@ -36,9 +36,10 @@ export const artistSchema = z.object({
     .number()
     .min(1900)
     .max(new Date().getFullYear())
-    .optional(),
+    .optional()
+    .or(z.undefined()),
   user_id: z.number().min(1, "User ID is required"),
-  manager_id: z.number().optional(),
+  manager_id: z.number().optional().or(z.undefined()),
 });
 
 export const songSchema = z.object({

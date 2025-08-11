@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Artist } from "@/types";
+import { Artist, User } from "@/types";
 import { Edit, Trash } from "lucide-react";
 import { ArtistForm } from "@/components/forms/ArtistForm";
 import { useState } from "react";
@@ -21,7 +21,16 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
-export default function ArtistPopover({ artist }: { artist: Artist }) {
+export default function ArtistPopover({
+  artist,
+}: {
+  artist: Artist &
+    User & {
+      manager_first_name: string;
+      manager_last_name: string;
+      manager_email: string;
+    };
+}) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const { deleteArtist } = useArtists();
@@ -31,7 +40,7 @@ export default function ArtistPopover({ artist }: { artist: Artist }) {
       try {
         await deleteArtist(id);
       } catch (error) {
-        console.error("Failed to delete artist:", error);
+        console.log("Failed to delete artist:", error);
       }
     }
   };

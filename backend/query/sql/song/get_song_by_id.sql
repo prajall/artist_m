@@ -1,11 +1,11 @@
 SELECT 
     songs.id, 
     songs.artist_id, 
-    songs.album_name, 
     songs.genre, 
     songs.song_cover,
     songs.song_link, 
     songs.title, 
+    a.manager_id,
     a.artist_name, 
     a.id AS artist_id, 
     u.id AS user_id,

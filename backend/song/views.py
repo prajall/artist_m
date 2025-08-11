@@ -13,7 +13,7 @@ from django.db import transaction
 class SongListCreateView(APIView):
 
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
         data = request.data.copy()
@@ -112,7 +112,7 @@ class SongListCreateView(APIView):
         
 class SongDetailView(APIView):
 
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+    permission_classes = [IsAuthenticated, IsArtistOrManager]
 
     def get_object(self, song_id):
         try:
@@ -127,6 +127,10 @@ class SongDetailView(APIView):
             song = self.get_object(song_id)
             if not song:
                 return api_error(status.HTTP_404_NOT_FOUND,"Song not found")
+            albums_response = fetch_many_dict(path="song/fetch_related_albums.sql", params={"song_id": song_id})
+            albums = [album['album_id'] for album in albums_response]
+            print("\n\n\n\n\n\nAlbums in song detail",albums)
+            song["albums"] = albums
             return api_response(status.HTTP_200_OK, "Song detail fetched successfully", song)
 
         except (PermissionDenied, NotAuthenticated) as e:

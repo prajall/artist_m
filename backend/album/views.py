@@ -20,7 +20,7 @@ from rest_framework.serializers import ValidationError
 class AlbumListCreateView(APIView):
 
     parser_classes = (JSONParser,MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsArtistOrReadOnly]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
         data = request.data.copy()
@@ -39,7 +39,7 @@ class AlbumListCreateView(APIView):
             if request.user.role == 'artist':
                 data['artist_id'] = artist['id']
             
-            serializer = AlbumSerializer(data=data)
+            serializer = AlbumSerializer(data=data, context={"user_id": request.user.id, "artist_id": artist['id']})
             if not serializer.is_valid():
                 return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
 
@@ -67,12 +67,6 @@ class AlbumListCreateView(APIView):
                 "total_count":0
             }
 
-            # if request.user.role == 'artist':
-            #     artist = fetch_one("artist/get_artist_by_user_id.sql", [request.user.id])
-            #     if not artist:
-            #         return api_error(status.HTTP_404_NOT_FOUND, "Artist not found") 
-
-            #     artist_id = artist['id']
             
             if user_role == 'artist':
                 artist = fetch_one("artist/get_artist_by_user_id.sql", [user_id])
@@ -181,10 +175,47 @@ class AlbumDetailView(APIView):
     
     
     
-    
-    
-    
+class AlbumSongView(APIView):
+
+    permission_classes = [IsAuthenticated, IsArtistOrManager]
+
+    def get_object(self, album_id, song_id):
+        try:
+            return fetch_one("album/get_album_song_exist.sql", {"album_id":album_id, "song_id":song_id})
+        except:
+            return None
+
+    def post(self, request):
+        try:
+            serializer = AlbumSongSerializer(data=request.data)
+            if not serializer.is_valid():
+                return api_error(status.HTTP_400_BAD_REQUEST, "Validation failed for provided details", serializer.errors)
+            new_album_song = serializer.save()
+            return api_response(status.HTTP_201_CREATED, "Album song created successfully", new_album_song)
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        except Exception as e:
+            print("Error creating album song", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
             
+    def delete(self, request):
+        try:
+            instance = self.get_object(request.data['album_id'], request.data['song_id'])
+            if not instance:
+                return api_error(status.HTTP_404_NOT_FOUND, "Album song not found")
+            self.check_object_permissions(request, instance)
+            
+            execute_sql(
+                path="album/delete_album_song.sql",
+                params={"song_id": instance['song_id'], "album_id": instance['album_id']},
+            )
+            return api_response(status.HTTP_204_NO_CONTENT, "Album song deleted successfully")
+        except (PermissionDenied, NotAuthenticated) as e:
+            return api_error(status.HTTP_403_FORBIDDEN, str(e))
+        except Exception as e:
+            print("Error deleting album song", e)
+            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+    
             # # Upload songs
             
             # songs_data = data.get('songs', [])

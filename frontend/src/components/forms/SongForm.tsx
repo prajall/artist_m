@@ -36,10 +36,15 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [selectedAlbumIds, setSelectedAlbumIds] = useState<number[]>([]);
+  const [filteredAlbums, setFilteredAlbums] = useState<Album[]>([]);
 
   const { createSong, updateSong } = useSongs();
   const [image, setImage] = useState<File | null>(null);
+  const { getSongById } = useSongs();
+  const { data: song }: { data: any } = getSongById(songId || 0);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  console.log("getSong", song?.data);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImage(e.target.files![0]);
@@ -50,7 +55,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
     defaultValues: {
       title: initialData?.title || "",
       artist_id: initialData?.artist_id || 0,
-      albums: initialData?.albums?.toString() || undefined,
+      // albums: initialData?.albums?.toString() || undefined,
       genre: initialData?.genre || "",
       song_cover: undefined,
     },
@@ -62,7 +67,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
         const res = await apiRequest.get("/artist/");
         setArtists(res.data?.data.artists);
       } catch (err) {
-        console.error("Failed to fetch artists:", err);
+        console.log("Failed to fetch artists:", err);
       }
     };
 
@@ -71,7 +76,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
         const res = await apiRequest.get("/album/?limit=100");
         setAlbums(res.data?.data.albums);
       } catch (err) {
-        console.error("Failed to fetch albums:", err);
+        console.log("Failed to fetch albums:", err);
       }
     };
 
@@ -87,6 +92,32 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
     );
   };
 
+  const handleAlbumChange = async () => {
+    console.log("handle album change");
+    const albumsToAdd = selectedAlbumIds.filter(
+      (id) => !song?.data?.albums.includes(id)
+    );
+    const albumsToRemove = song?.data?.albums.filter(
+      (id: number) => !selectedAlbumIds.includes(id)
+    );
+
+    if (albumsToAdd.length > 0) {
+      for (const albumId of albumsToAdd) {
+        await apiRequest.post(`/album/album-song/`, {
+          album_id: albumId,
+          song_id: songId,
+        });
+      }
+    }
+    if (albumsToRemove.length > 0) {
+      for (const albumId of albumsToRemove) {
+        await apiRequest.delete(`/album/album-song/`, {
+          data: { album_id: albumId, song_id: songId },
+        });
+      }
+    }
+  };
+
   const onSubmit = async (data: SongFormData) => {
     try {
       if (image) {
@@ -96,16 +127,47 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
       console.log("albums", data.albums);
       if (songId) {
         delete data.albums;
+        console.log("here");
+        await handleAlbumChange();
         await updateSong({ id: songId, data });
       } else {
         await createSong(data);
       }
       onSuccess();
     } catch (error: any) {
-      console.error("Failed to save song:", error);
-      form.setError("root", {
-        message: "Failed to save song. Please try again.",
-      });
+      console.log("Failed to save user:", error);
+
+      if (error.response) {
+        const details = error.response.data?.detail;
+
+        form.setError("root", {
+          message:
+            error.response.data?.message ||
+            "Failed to save user. Please try again.",
+        });
+
+        if (details && typeof details === "object") {
+          Object.entries(details).forEach(([key, value]) => {
+            if (key in form.getValues()) {
+              form.setError(key as any, {
+                message: value as string,
+              });
+            } else {
+              form.setError("root", {
+                message: value as string,
+              });
+            }
+          });
+        } else {
+          form.setError("root", {
+            message: details || "Failed to save user. Please try again.",
+          });
+        }
+      } else {
+        form.setError("root", {
+          message: "Failed to save user. Please try again.",
+        });
+      }
     }
   };
 
@@ -126,15 +188,31 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
   ];
 
   useEffect(() => {
-    const filteredAlbums = albums.filter(
+    console.log("albums", albums);
+    console.log("Artist", form.watch("artist_id"));
+    // console.log("filtered", filtered);
+    const filtered = albums.filter(
       (album) => album.artist_id === form.watch("artist_id")
     );
     const filteredSelectedAlbumIds = selectedAlbumIds.filter((id) =>
-      filteredAlbums.some((album) => album.id === id)
+      filtered.some((album) => album.id === id)
     );
     setSelectedAlbumIds(filteredSelectedAlbumIds);
-    setAlbums(filteredAlbums);
-  }, [form.watch("artist_id")]);
+    setFilteredAlbums(filtered);
+  }, [albums, form.watch("artist_id")]);
+
+  useEffect(() => {
+    console.log("song", song);
+
+    if (songId && song) {
+      console.log("albums in song", song.data?.albums);
+      setSelectedAlbumIds(song.data?.albums || []);
+    }
+  }, [song]);
+
+  useEffect(() => {
+    console.log("selectedAlbumIds", selectedAlbumIds);
+  }, [selectedAlbumIds]);
 
   return (
     <Form {...form}>
@@ -169,6 +247,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
                   defaultValue={field.value.toString()}
+                  disabled={!!songId}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -220,7 +299,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
         <div>
           <FormLabel>Add to Albums</FormLabel>
           <div className="flex overflow-x-auto gap-2 py-2 no-scrollbar">
-            {albums.map((album) => {
+            {filteredAlbums.map((album) => {
               const isSelected = selectedAlbumIds.includes(album.id);
               return (
                 <div
@@ -233,7 +312,7 @@ export function SongForm({ songId, initialData, onSuccess }: SongFormProps) {
                   onClick={() => toggleAlbum(album.id)}
                 >
                   <span className="truncate max-w-[120px]">
-                    {album.album_name}
+                    {album.id} {album.album_name}
                   </span>
 
                   {isSelected && (

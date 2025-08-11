@@ -9,16 +9,17 @@ from django.core.files.storage import FileSystemStorage
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from rest_framework import status
-from rest_framework.permissions import OR
 import os
 from django.db import transaction
 from artist.serializers import ArtistSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 # Create your views here.
 class UserListCreateView(APIView):
 
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdminOrReadOnlyManager]
     
     def post(self, request):
         data = request.data.copy()
@@ -57,6 +58,8 @@ class UserListCreateView(APIView):
         if not role in ["super_admin", "artist_manager", "artist","user"]:
             role=None
         
+        if request.user.role == 'artist_manager':
+            role = 'user'
         
         params = {
             'search': search,
@@ -120,8 +123,10 @@ class UserDetailView(APIView):
             return api_response(status.HTTP_204_NO_CONTENT, "User deleted successfully")
         if delete_user==0:
             return api_response(status.HTTP_204_NO_CONTENT, "User already deleted")
-            
+
+@method_decorator(csrf_exempt, name='dispatch')    
 class LoginView(APIView):
+    authentication_classes = []
 
     def post(self,request):
         data = request.data
@@ -141,7 +146,6 @@ class LoginView(APIView):
             httponly=True,
             secure=True,
             samesite=None,
-            max_age=settings.ACCESS_TOKEN_LIFETIME
         )
         
         response.set_cookie(
@@ -155,24 +159,40 @@ class LoginView(APIView):
         return response
        
 class RefreshView(APIView):
-
-    def post (self,request):
-        data = request.data
+    authentication_classes = []
+    def post(self, request):
+        print("=== REQUEST DEBUG ===")
+        print("\nHeaders:", dict(request.headers))
+        print("\nCookies:", request.COOKIES)
+        print("\nMethod:", request.method)
+        print("\nContent-Type:", request.content_type)
+        print("\nOrigin:", request.headers.get('Origin'))
+        print("\nUser-Agent:", request.headers.get('User-Agent'))
+        print("\nCookie Header:", request.headers.get('Cookie'))
+        print("==================")
+        data = {}
+        data["refresh"] = request.COOKIES.get("refresh_token") # interceptor sends in cookies
+        if not data["refresh"]:
+            data = request.data  # middleware sends in data
+        print("\n\nCookies Data", data["refresh"])
         serializer = RefreshSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         access = serializer.validated_data['access']
-        
-        Response.set_cookie(
+
+        res =  Response(
+            {"message": "Access token refreshed successfully", "access_token": access},
+            status=status.HTTP_200_OK,
+        )
+        res.set_cookie(
             key='access_token',
             value= access,
             httponly=True,
             secure=True,
             samesite=None,
-            max_age=settings.ACCESS_TOKEN_LIFETIME
         )
-        
-        return Response({"message":"Accss token refreshed successfully"},status=status.HTTP_200_OK)
-    
+        return res
+
+       
     
 class UserInfo(APIView):
     permission_classes = [IsAuthenticated]

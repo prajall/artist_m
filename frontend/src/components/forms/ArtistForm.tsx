@@ -22,6 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthProvider";
 import { apiRequest } from "@/lib/api";
 import { useArtists } from "@/lib/hooks/useArtists";
 import { ArtistFormData, artistSchema } from "@/lib/schemas";
@@ -34,7 +35,7 @@ const SERVER_BASE_URL = process.env.SERVER_BASE_URL || "http://localhost:8000";
 
 interface ArtistFormProps {
   artistId?: number;
-  initialData?: Partial<Artist>;
+  initialData?: Artist;
   onSuccess: () => void;
 }
 
@@ -48,7 +49,7 @@ export const searchUsers = async (
     );
     return response.data?.data.users;
   } catch (error) {
-    console.error("Error searching users:", error);
+    console.log("Error searching users:", error);
     return [];
   }
 };
@@ -84,7 +85,7 @@ export const UserSearch = ({
         const results = await searchUsers(query, role);
         setUsers(results);
       } catch (error) {
-        console.error("Search failed:", error);
+        console.log("Search failed:", error);
         setUsers([]);
       } finally {
         setLoading(false);
@@ -195,13 +196,14 @@ export function ArtistForm({
   initialData,
   onSuccess,
 }: ArtistFormProps) {
+  const { user } = useAuth();
   const form = useForm<ArtistFormData>({
     resolver: zodResolver(artistSchema),
     defaultValues: {
       artist_name: initialData?.artist_name || "",
       first_release_year: initialData?.first_release_year || undefined,
       user_id: initialData?.user_id || 0,
-      manager_id: initialData?.manager_id || undefined,
+      manager_id: initialData?.manager_id || 0,
     },
   });
 
@@ -216,7 +218,7 @@ export function ArtistForm({
       }
       onSuccess();
     } catch (error: any) {
-      console.error("Failed to save user:", error);
+      console.log("Failed to save user:", error);
 
       if (error.response) {
         const details = error.response.data?.detail;
@@ -251,6 +253,12 @@ export function ArtistForm({
       }
     }
   };
+
+  useEffect(() => {
+    if (user?.role === "artist_manager") {
+      form.setValue("manager_id", user.id);
+    }
+  }, [user]);
 
   return (
     <Form {...form}>

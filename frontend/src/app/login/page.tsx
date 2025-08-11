@@ -44,7 +44,7 @@ export default function LoginPage() {
         router.push("/admin");
       }
     } catch (error: any) {
-      console.error("Failed to login user:", error);
+      console.log("Failed to login user:", error);
 
       if (error.response) {
         const details = error.response.data;

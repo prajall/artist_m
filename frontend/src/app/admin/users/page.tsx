@@ -51,7 +51,7 @@ export default function UsersPage() {
       try {
         await deleteUser(id);
       } catch (error) {
-        console.error("Failed to delete user:", error);
+        console.log("Failed to delete user:", error);
       }
     }
   };

@@ -116,7 +116,7 @@ export const useAlbums = (artistId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["albums"] });
     },
     onError: (err: any) => {
-      console.error("Error creating album:", err);
+      console.log("Error creating album:", err);
       if (err.response) {
         toast.error(err.response.data.message, { id: "album-create" });
       } else {
@@ -137,7 +137,7 @@ export const useAlbums = (artistId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["album"] });
     },
     onError: (err) => {
-      console.error("Error updating album:", err);
+      console.log("Error updating album:", err);
       toast.error("Failed to update album", { id: "album-update" });
     },
   });
@@ -153,7 +153,7 @@ export const useAlbums = (artistId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["albums"] });
     },
     onError: (err) => {
-      console.error("Error deleting album:", err);
+      console.log("Error deleting album:", err);
       toast.error("Failed to delete album", { id: "album-delete" });
     },
   });

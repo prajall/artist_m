@@ -81,6 +81,24 @@ class AlbumSongSerializer(serializers.Serializer):
     album_id = serializers.IntegerField()
     song_id = serializers.IntegerField()
 
+    def validate(self, data):
+        album = fetch_one("album/get_album_by_id.sql", {"album_id": data["album_id"]})
+        if not album:
+            raise serializers.ValidationError({"album_id": "Invalid album ID."})
+        # return value
+    
+        song = fetch_one("song/get_song_by_id.sql", {"id": data["song_id"]})
+        if not song:
+            raise serializers.ValidationError({"song_id": "Invalid song ID."})
+        # return value
+
+        if song['artist_id'] != album['artist_id']:
+            raise serializers.ValidationError({"song_id": "Song and artist have different artists."})
+    
+        if fetch_one("album/get_album_song_exist.sql", data):
+            raise serializers.ValidationError("Song already exists in album.")
+        return data
+
     def create(self, validated_data):
         new_album_song = execute_sql(
             path="album/insert_album_song.sql",
@@ -92,23 +110,35 @@ class AlbumSongSerializer(serializers.Serializer):
         )
         print("New Album song:", new_album_song)
         return new_album_song
+    
+    def delete(self, instance):
+        try:
+            execute_sql(
+                path="album/delete_album_song.sql",
+                params={"song_id": instance['song_id'], "album_id": instance['album_id']},
+            )
+        except Exception as e:
+            print("Error deleting album song:", e)
+            raise serializers.ValidationError("Failed to delete album song. Please try again.")
+        return instance
 
 class ValidatedAlbumSerializer(AlbumSongSerializer):
 
     def validate_album_id(self, value):
 
         artist = fetch_one("artist/get_artist_by_id.sql", {"id": self.context.get('artist_id')})
-        print("\n\n\nArtist",self.context.get('artist_id'),artist, self.context.get('user').role)
+        # print("\n\n\nArtist",self.context.get('artist_id'),artist, self.context.get('user').role)
         if not artist:
             raise serializers.ValidationError("Artist not found.")
+
         artist_id = artist['id']
 
         album = fetch_one("album/get_album_by_id.sql", {"album_id": value})
         if not album:
             raise serializers.ValidationError(f"Invalid album ID: {value}")
 
-        print("\n\n\nAlbum",album,artist_id, self.context.get('user').role)
-        if album['artist_id'] != artist_id or self.context.get('user').role != "super_admin":
+        
+        if album['artist_id'] != artist_id or self.context.get('user').role != "super_admin" and album['manager_id'] != self.context.get('user').id:
             raise serializers.ValidationError("You do not have permission to modify this album.")
 
         return value

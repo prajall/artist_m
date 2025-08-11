@@ -104,7 +104,7 @@ export const useUsers = () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err: any) => {
-      console.error("Error creating user:", err);
+      console.log("Error creating user:", err);
       if (err.response) {
         toast.error(err.response.data.message, { id: "user-create" });
       } else {
@@ -125,7 +125,7 @@ export const useUsers = () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
     onError: (err) => {
-      console.error("Error updating user:", err);
+      console.log("Error updating user:", err);
       toast.error("Failed to update user", { id: "user-update" });
     },
   });
@@ -141,7 +141,7 @@ export const useUsers = () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err) => {
-      console.error("Error deleting user:", err);
+      console.log("Error deleting user:", err);
       toast.error("Failed to delete user", { id: "user-delete" });
     },
   });

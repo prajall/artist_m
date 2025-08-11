@@ -65,7 +65,7 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
       }
       onSuccess();
     } catch (error: any) {
-      console.error("Failed to save album:", error);
+      console.log("Failed to save album:", error);
 
       if (error.response) {
         const details = error.response.data?.detail;

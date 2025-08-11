@@ -53,7 +53,7 @@ export default function SongsPage() {
       try {
         await deleteSong(id);
       } catch (error) {
-        console.error("Failed to delete song:", error);
+        console.log("Failed to delete song:", error);
       }
     }
   };
@@ -92,7 +92,6 @@ export default function SongsPage() {
         <TableHeader>
           <TableRow className="text-muted-foreground text-sm">
             <TableHead>Title</TableHead>
-            <TableHead>Album</TableHead>
             <TableHead>Genre</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Actions</TableHead>
@@ -123,9 +122,6 @@ export default function SongsPage() {
                 </div>
               </TableCell>
               <TableCell>
-                {song.albums?.length ? song.albums.length : "Single"}
-              </TableCell>
-              <TableCell>
                 {song.genre && <Badge variant="secondary">{song.genre}</Badge>}
               </TableCell>
               <TableCell>
@@ -138,7 +134,7 @@ export default function SongsPage() {
                   </Button>
 
                   {canUpdate && (
-                    <Dialog>
+                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />

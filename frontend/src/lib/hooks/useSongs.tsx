@@ -32,7 +32,7 @@ const fetchSongs = async (
   };
 };
 
-const fetchSongById = async (id: number): Promise<Song> => {
+const fetchSongById = async (id: number): Promise<any> => {
   const response = await apiRequest.get(`/song/${id}/`);
   return response.data;
 };
@@ -117,8 +117,8 @@ export const useSongs = (artistId?: number, managerId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });
     },
     onError: (err: any) => {
-      console.error("Error creating song:", err);
-      if (err.response) {
+      console.log("Error creating song:", err);
+      if (err.response && err.response.data?.message) {
         toast.error(err.response.data.message, { id: "song-create" });
       } else {
         toast.error("Failed to create song", { id: "song-create" });
@@ -138,7 +138,7 @@ export const useSongs = (artistId?: number, managerId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["song"] });
     },
     onError: (err) => {
-      console.error("Error updating song:", err);
+      console.log("Error updating song:", err);
       toast.error("Failed to update song", { id: "song-update" });
     },
   });
@@ -154,7 +154,7 @@ export const useSongs = (artistId?: number, managerId?: number) => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });
     },
     onError: (err) => {
-      console.error("Error deleting song:", err);
+      console.log("Error deleting song:", err);
       toast.error("Failed to delete song", { id: "song-delete" });
     },
   });
