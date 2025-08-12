@@ -145,9 +145,11 @@ class ArtistExportView(APIView):
     permission_classes = [IsAuthenticated, IsSuperAdminOrManager]
 
     def get(self, request):
-        try:
+        # try:
             if request.user.role=='artist_manager':
                 manager_id = request.user.id
+            else:
+                manager_id = None
             artists = fetch_all_dict(path="artist/export_artist.sql", params={"manager_id": manager_id})
             # create a csv file and download it
             response = HttpResponse(content_type='text/csv')
@@ -165,6 +167,6 @@ class ArtistExportView(APIView):
                 writer.writerow(['No data available'])
 
             return response
-        except Exception as e:
-            print("Error exporting artists", e)
-            return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+        # except Exception as e:
+        #     print("Error exporting artists", e)
+        #     return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")

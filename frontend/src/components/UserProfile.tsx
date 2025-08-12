@@ -25,6 +25,7 @@ export function UserProfile({ user }: { user: User }) {
               <AvatarImage
                 src={SERVER_BASE_URL + user.profile_image}
                 alt={`${user.first_name} ${user.last_name}`}
+                className="object-cover"
               />
             ) : (
               <AvatarFallback className="text-2xl font-semibold bg-gray-100">

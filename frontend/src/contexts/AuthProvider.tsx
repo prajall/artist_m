@@ -2,6 +2,7 @@
 import { User } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { apiRequest } from "../lib/api";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: User | null;
@@ -13,13 +14,18 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  const router = useRouter();
+
   const fetchUser = async () => {
     try {
       const response = await apiRequest.get("/user/info/");
       setUser(response.data.data);
-    } catch (error) {
+    } catch (error: any) {
       console.log("Failed to fetch user info:", error);
       setUser(null);
+      if (error.response && error.response.status == 403) {
+        router.push("/login");
+      }
     }
   };
   useEffect(() => {

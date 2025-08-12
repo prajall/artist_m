@@ -3,8 +3,11 @@ import axios from "axios";
 import { File, FilePlus, Upload, X } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { Button } from "../ui/button";
+import toast from "react-hot-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { client } from "@/contexts/QueryProvider";
 
-const ArtistCSVForm: React.FC = () => {
+const ArtistCSVForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -37,6 +40,9 @@ const ArtistCSVForm: React.FC = () => {
       } else {
         setFile(null);
       }
+      toast.success("Artists uploaded successfully");
+      client.invalidateQueries({ queryKey: ["artists"] });
+      onSuccess();
     } catch (error: any) {
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;

@@ -2,7 +2,7 @@
 
 import Pagination from "@/components/Pagination";
 import { useUsers } from "@/lib/hooks/useUsers";
-import { Edit, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Eye, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { UserForm } from "../../../components/forms/UserForm";
 import { Button } from "../../../components/ui/button";
@@ -59,16 +59,19 @@ export default function UsersPage() {
   const canView = hasAccess(user, "user", "view");
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      try {
-        await deleteUser(id);
-      } catch (error) {
-        console.log("Failed to delete user:", error);
-      }
+    try {
+      await deleteUser(id);
+    } catch (error) {
+      console.log("Failed to delete user:", error);
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="w-full h-[80vh] flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin" />
+      </div>
+    );
   // if (error) return <div>Error: {error}</div>;
   if (!users) return <div>No data</div>;
 
@@ -185,13 +188,44 @@ export default function UsersPage() {
                     </Dialog>
                   )}
                   {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          // onClick={() => handleDelete(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Confirm Delete User</DialogTitle>
+                        </DialogHeader>
+                        {user.role === "artist" ? (
+                          <p className="text-sm ">
+                            This will also delete artist and their related songs
+                            and albums
+                          </p>
+                        ) : (
+                          <p className="text-sm ">
+                            This will delete user and related datas.
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button variant="outline" size="sm">
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(user.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               </TableCell>

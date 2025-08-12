@@ -27,6 +27,11 @@ def manager_upload_artists(file, manager_id):
     reader = csv.DictReader(text_io,skipinitialspace=True)
     reader.fieldnames = [h.strip() for h in reader.fieldnames]
     artist_datas = list(reader)
+    for row in reader:
+        for key in row:
+            if row[key] is not None:
+                row[key] = row[key].strip()
+        artist_datas.append(row)
 
     errors = []
     query_values = []
@@ -90,10 +95,15 @@ def bulk_data_validation(artists):
     
     # check and send errors     
 
+    # check duplicate emails
+    appeared_emails = set()
     for row_num, artist in enumerate(artists,start=2):
-        user = user_by_email.get(artist['email'])
+        user = user_by_email.get(artist['email'].strip())
         
-        print("\nUser for email",artist['email'],user)
+        if artist['email'].strip() in appeared_emails:
+            errors.append(f"Row: {row_num}: Duplicate email '{artist['email']}'")
+            continue
+        appeared_emails.add(artist['email'].strip())
 
         if not user:
             errors.append(f"Row: {row_num}: User with email '{artist['email']}' does not exist.")

@@ -34,6 +34,7 @@ import ArtistCSVForm from "@/components/forms/ArtistCSVForm";
 import { hasAccess } from "@/lib/actions/permission";
 import { useAuth } from "@/contexts/AuthProvider";
 import { apiRequest } from "@/lib/api";
+import toast from "react-hot-toast";
 
 export default function ArtistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -70,7 +71,7 @@ export default function ArtistsPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Failed to download artists CSV.");
+      toast.error("Failed to download artists CSV.");
     }
   };
 
@@ -95,7 +96,11 @@ export default function ArtistsPage() {
                 <DialogHeader>
                   <DialogTitle>Import Artists from CSV</DialogTitle>
                 </DialogHeader>
-                <ArtistCSVForm />
+                <ArtistCSVForm
+                  onSuccess={() => {
+                    setIsCSVOpen(false);
+                  }}
+                />
               </DialogContent>
             </Dialog>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

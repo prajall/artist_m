@@ -159,12 +159,12 @@ export default function AlbumsPage() {
                             onSelect={(e) => e.preventDefault()}
                           >
                             <Edit className="mr-2 h-4 w-4" />
-                            Edit Artist
+                            Edit Album
                           </DropdownMenuItem>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Edit Artist</DialogTitle>
+                            <DialogTitle>Edit A</DialogTitle>
                           </DialogHeader>
                           <AlbumForm
                             albumId={album.id}
@@ -182,7 +182,7 @@ export default function AlbumsPage() {
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Artist
+                        Delete A
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

@@ -21,27 +21,16 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL;
 
-export default function ArtistPopover({
-  artist,
-}: {
-  artist: Artist &
-    User & {
-      manager_first_name: string;
-      manager_last_name: string;
-      manager_email: string;
-    };
-}) {
+export default function ArtistPopover({ artist }: { artist: any }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const { deleteArtist } = useArtists();
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this artist?")) {
-      try {
-        await deleteArtist(id);
-      } catch (error) {
-        console.log("Failed to delete artist:", error);
-      }
+    try {
+      await deleteArtist(id);
+    } catch (error) {
+      console.log("Failed to delete artist:", error);
     }
   };
 

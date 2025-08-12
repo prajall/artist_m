@@ -28,8 +28,7 @@ def s_admin_upload_artists(file):
     text_io.seek(0)
     reader = csv.DictReader(text_io,skipinitialspace=True)
     reader.fieldnames = [h.strip() for h in reader.fieldnames]
-    artist_user_datas = list(reader)
-    
+    artist_user_datas = list(reader)    
 
 
     print("Artist_data",artist_user_datas)

@@ -8,6 +8,7 @@ import {
   Album,
   LogOut,
   User,
+  Loader2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,7 +64,18 @@ export function AdminSidebar() {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user) return <div>Loading...</div>;
+  if (!user)
+    return (
+      <div className="w-64">
+        <div className="flex gap-2 px-4 py-6">
+          <span className="font-semibold">Artist Management</span>
+        </div>
+        <div className=" h-[80vh] flex items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      </div>
+    );
+
   const filteredMenuItems =
     menuItems.filter(
       (item) =>

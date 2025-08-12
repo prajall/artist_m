@@ -144,6 +144,7 @@ export function AlbumForm({ albumId, initialData, onSuccess }: AlbumFormProps) {
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
                   defaultValue={field.value?.toString()}
+                  disabled={!!albumId}
                 >
                   <FormControl>
                     <SelectTrigger>
